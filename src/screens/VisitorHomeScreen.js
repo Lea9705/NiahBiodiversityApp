@@ -2,7 +2,7 @@
 // species. FEATURED_SPECIES is dummy data - replace with a call to the
 // web team's knowledge-system API once it exists.
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
@@ -24,6 +24,19 @@ export default function VisitorHomeScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
+
+      <Pressable
+        style={styles.backButton}
+        onPress={() => navigation.goBack()}
+      >
+        <Ionicons
+          name="arrow-back"
+          size={22}
+          color={colors.textPrimary}
+      />
+      <Text style={styles.backText}>Back</Text>
+      </Pressable>
+
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>Welcome, visitor</Text>
@@ -59,7 +72,11 @@ export default function VisitorHomeScreen({ navigation }) {
             iconBg={colors.successBg}
             showChevron
             onPress={() => {
+              navigation.navigate('PlantDetail', {
+              plant: item,  
+              });
               // TODO: navigate to a plant detail screen, passing this item
+
             }}
           />
         )}
@@ -79,6 +96,8 @@ export default function VisitorHomeScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+  backButton: {flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingVertical: 8, marginBottom: 8, },
+  backText: {fontSize: 16, color: colors.textPrimary, marginLeft: 6, },
   container: { flex: 1, backgroundColor: colors.bg, padding: 16},
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
   title: { fontSize: 16, fontWeight: '600', color: colors.textPrimary },
@@ -86,4 +105,5 @@ const styles = StyleSheet.create({
   badge: { backgroundColor: colors.accentBg, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   badgeText: { fontSize: 11, color: colors.accentText },
   sectionLabel: { fontSize: 12, color: colors.textMuted, marginBottom: 8 },
+
 });
