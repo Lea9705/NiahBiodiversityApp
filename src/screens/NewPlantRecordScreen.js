@@ -14,7 +14,6 @@ import PrimaryButton from '../components/PrimaryButton';
 
 export default function NewPlantRecordScreen({ navigation }) {
   const [photos, setPhotos] = useState([]);
-  const [location, setLocation] = useState(null);
   const [locationError, setLocationError] = useState('');
   const [form, setForm] = useState({
     scientificName: '',
@@ -22,8 +21,10 @@ export default function NewPlantRecordScreen({ navigation }) {
     family: '',
     height: '',
     diameter: '',
+    latitude: '',
+    longitude: '',
     notes: '',
-  });
+  }); 
 
   const updateField = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -85,19 +86,20 @@ export default function NewPlantRecordScreen({ navigation }) {
 };
 
   const captureLocation = async () => {
-    const permission = await Location.requestForegroundPermissionsAsync();
-    if (!permission.granted) {
-      setLocationError('Location permission denied');
-      return;
-    }
-    try {
-      const pos = await Location.getCurrentPositionAsync({});
-      setLocation(pos.coords);
-      setLocationError('');
-    } catch (e) {
-      setLocationError('Could not get a GPS fix. Try moving to open ground.');
-    }
-  };
+      const permission = await Location.requestForegroundPermissionsAsync();
+      if (!permission.granted) {
+        setLocationError('Location permission denied');
+        return;
+      }
+      try {
+        const pos = await Location.getCurrentPositionAsync({});
+        updateField('latitude', pos.coords.latitude.toFixed(6));
+        updateField('longitude', pos.coords.longitude.toFixed(6));
+        setLocationError('');
+      } catch (e) {
+        setLocationError('Could not get a GPS fix. Try moving to open ground.');
+      }
+    };
 
   useEffect(() => {
     captureLocation();
@@ -112,7 +114,6 @@ export default function NewPlantRecordScreen({ navigation }) {
     const record = {
       ...form,
       photos,
-      location,
       createdAt: new Date().toISOString(),
     };
 
@@ -192,17 +193,30 @@ export default function NewPlantRecordScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-        <TouchableOpacity style={styles.gpsRow} onPress={captureLocation}>
+        <TouchableOpacity style={styles.gpsButton} onPress={captureLocation}>
           <Ionicons name="location-outline" size={18} color={colors.successText} />
-          <View>
-            <Text style={styles.gpsLabel}>GPS location</Text>
-            <Text style={styles.gpsValue}>
-              {location
-                ? `${location.latitude.toFixed(4)}° N, ${location.longitude.toFixed(4)}° E · ±${Math.round(location.accuracy)}m`
-                : locationError || 'Getting location…'}
-            </Text>
-          </View>
+          <Text style={styles.gpsButtonText}>Use current GPS location</Text>
         </TouchableOpacity>
+        {locationError ? <Text style={styles.gpsError}>{locationError}</Text> : null}
+
+        <View style={styles.grid2}>
+          <StyledInput
+            label="Latitude"
+            placeholder="e.g. 3.841200"
+            value={form.latitude}
+            onChangeText={(v) => updateField('latitude', v)}
+            keyboardType="numeric"
+            containerStyle={{ flex: 1 }}
+          />
+          <StyledInput
+            label="Longitude"
+            placeholder="e.g. 113.769100"
+            value={form.longitude}
+            onChangeText={(v) => updateField('longitude', v)}
+            keyboardType="numeric"
+            containerStyle={{ flex: 1 }}
+          />
+        </View>
 
         <StyledInput
           label="Scientific name"
@@ -230,7 +244,7 @@ export default function NewPlantRecordScreen({ navigation }) {
             value={form.height}
             onChangeText={(v) => updateField('height', v)}
             keyboardType="numeric"
-            style={{ flex: 1 }}
+            containerStyle={{ flex: 1 }}
           />
           <StyledInput
             label="Diameter (cm)"
@@ -238,7 +252,7 @@ export default function NewPlantRecordScreen({ navigation }) {
             value={form.diameter}
             onChangeText={(v) => updateField('diameter', v)}
             keyboardType="numeric"
-            style={{ flex: 1 }}
+            containerStyle={{ flex: 1 }}
           />
         </View>
 
@@ -253,7 +267,7 @@ export default function NewPlantRecordScreen({ navigation }) {
         />
 
         <PrimaryButton
-          title="Save record offline"
+          title="Save record"
           icon={<Ionicons name="save-outline" size={16} color={colors.buttonText} />}
           onPress={handleSave}
         />
@@ -273,9 +287,9 @@ const styles = StyleSheet.create({
   photoBox: { width: '100%', height: 120, borderWidth: 1.5, borderColor: colors.border, borderStyle: 'dashed', borderRadius: 8, alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 16, overflow: 'hidden' },
   photoText: { fontSize: 13, color: colors.textSecondary },
   photoPreview: { width: '100%', height: '100%' },
-  gpsRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.surfaceAlt, borderRadius: 8, padding: 10, marginBottom: 16 },
-  gpsLabel: { fontSize: 12, color: colors.textSecondary },
-  gpsValue: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
+  gpsButton: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.surfaceAlt, borderWidth: 0.5, borderColor: colors.border, borderRadius: 8, padding: 12, marginBottom: 8 },
+  gpsButtonText: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
+  gpsError: { fontSize: 12, color: colors.warningText, marginBottom: 12 },
   grid2: { flexDirection: 'row', gap: 10 },
   photoSection: { marginBottom: 16, },
   photoList: { gap: 10, marginBottom: 10, },
