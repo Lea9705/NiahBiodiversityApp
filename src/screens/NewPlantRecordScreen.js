@@ -13,7 +13,7 @@ import StyledInput from '../components/StyledInput';
 import PrimaryButton from '../components/PrimaryButton';
 
 export default function NewPlantRecordScreen({ navigation }) {
-  const [photo, setPhoto] = useState(null);
+  const [photos, setPhotos] = useState([]);
   const [location, setLocation] = useState(null);
   const [locationError, setLocationError] = useState('');
   const [form, setForm] = useState({
@@ -28,14 +28,61 @@ export default function NewPlantRecordScreen({ navigation }) {
   const updateField = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 
   const capturePhoto = async () => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Camera permission needed', 'Enable camera access in settings to attach a photo.');
+  const permission =
+    await ImagePicker.requestCameraPermissionsAsync();
+
+  if (!permission.granted) {
+    Alert.alert(
+      'Camera permission needed',
+      'Camera access is required to capture a plant photo.'
+    );
+    return;
+  }
+
+  try {
+    // Try the real camera first.
+    const result = await ImagePicker.launchCameraAsync({
+      quality: 0.6,
+    });
+
+    if (!result.canceled && result.assets?.length > 0) {
+      const newPhoto = result.assets[0].uri;
+
+      setPhotos((currentPhotos) => [
+        ...currentPhotos,
+        newPhoto,
+      ]);
+    }
+  } catch (error) {
+    // iOS Simulator does not have a camera,
+    // so fall back to selecting an existing image.
+    const libraryPermission =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!libraryPermission.granted) {
+      Alert.alert(
+        'Photo library permission needed',
+        'Allow photo library access to select a test image.'
+      );
       return;
     }
-    const result = await ImagePicker.launchCameraAsync({ quality: 0.6 });
-    if (!result.canceled) setPhoto(result.assets[0].uri);
-  };
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.6,
+      allowsMultipleSelection: false,
+    });
+
+    if (!result.canceled && result.assets?.length > 0) {
+      const newPhoto = result.assets[0].uri;
+
+      setPhotos((currentPhotos) => [
+        ...currentPhotos,
+        newPhoto,
+      ]);
+    }
+  }
+};
 
   const captureLocation = async () => {
     const permission = await Location.requestForegroundPermissionsAsync();
@@ -62,7 +109,12 @@ export default function NewPlantRecordScreen({ navigation }) {
       return;
     }
 
-    const record = { ...form, photo, location, createdAt: new Date().toISOString() };
+    const record = {
+      ...form,
+      photos,
+      location,
+      createdAt: new Date().toISOString(),
+    };
 
     // TODO: save `record` into local offline storage (e.g. WatermelonDB or SQLite)
     // and add it to a sync queue so it uploads automatically once the device
@@ -89,16 +141,56 @@ export default function NewPlantRecordScreen({ navigation }) {
 
         <Text style={styles.title}>New plant record</Text>
 
-        <TouchableOpacity style={styles.photoBox} onPress={capturePhoto}>
-          {photo ? (
-            <Image source={{ uri: photo }} style={styles.photoPreview} />
-          ) : (
-            <>
-              <Ionicons name="camera-outline" size={24} color={colors.textSecondary} />
-              <Text style={styles.photoText}>Tap to capture photo</Text>
-            </>
-          )}
-        </TouchableOpacity>
+        <View style={styles.photoSection}>
+          {photos.length > 0 && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.photoList}
+            >
+               {photos.map((uri, index) => (
+                  <View key={`${uri}-${index}`} style={styles.photoItem}>
+                    <Image
+                      source={{ uri }}
+                      style={styles.photoPreview}
+                    />
+
+                    <TouchableOpacity
+                      style={styles.removePhotoButton}
+                      onPress={() => {
+                        setPhotos((currentPhotos) =>
+                          currentPhotos.filter((_, i) => i !== index)
+                        );
+                      }}
+                    >
+                      <Ionicons
+                        name="close"
+                        size={14}
+                        color="#FFFFFF"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+
+            <TouchableOpacity
+              style={styles.photoButton}
+              onPress={capturePhoto}
+            >
+              <Ionicons
+                name="camera-outline"
+                size={24}
+                color={colors.textSecondary}
+              />
+
+              <Text style={styles.photoText}>
+                {photos.length === 0
+                  ? 'Tap to capture photo'
+                  : 'Capture another photo'}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
         <TouchableOpacity style={styles.gpsRow} onPress={captureLocation}>
           <Ionicons name="location-outline" size={18} color={colors.successText} />
@@ -185,4 +277,9 @@ const styles = StyleSheet.create({
   gpsLabel: { fontSize: 12, color: colors.textSecondary },
   gpsValue: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
   grid2: { flexDirection: 'row', gap: 10 },
+  photoSection: { marginBottom: 16, },
+  photoList: { gap: 10, marginBottom: 10, },
+  photoItem: { width: 100, height: 100, borderRadius: 8, overflow: 'hidden', position: 'relative', },
+  removePhotoButton: { position: 'absolute', top: 5, right: 5, width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(0, 0, 0, 0.7)', alignItems: 'center', justifyContent: 'center', },
+  photoButton: { width: '100%', height: 120, borderWidth: 1.5, borderColor: colors.border, borderStyle: 'dashed', borderRadius: 8, alignItems: 'center', justifyContent: 'center', gap: 6, },
 });

@@ -27,6 +27,7 @@ export default function BotanistHomeScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
+
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>Ground truthing</Text>
@@ -79,7 +80,13 @@ export default function BotanistHomeScreen({ navigation }) {
           { icon: 'location-outline', label: 'Map' },
           { icon: 'person-outline', label: 'Profile' },
         ]}
+        onPress={(index) => {
+          if (index === 3) {
+            navigation.navigate('BotanistProfile');
+          }
+        }}
       />
+
     </SafeAreaView>
   );
 }

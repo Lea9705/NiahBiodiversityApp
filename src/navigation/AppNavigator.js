@@ -8,6 +8,7 @@ import BotanistHomeScreen from '../screens/BotanistHomeScreen';
 import VisitorHomeScreen from '../screens/VisitorHomeScreen';
 import NewPlantRecordScreen from '../screens/NewPlantRecordScreen';
 import PlantDetailScreen from '../screens/PlantDetailScreen';
+import BotanistProfileScreen from '../screens/BotanistProfileScreen';
 
 import { colors } from '../theme/colors';
 
@@ -29,6 +30,7 @@ export default function AppNavigator() {
         <Stack.Screen name="VisitorHome" component={VisitorHomeScreen} />
         <Stack.Screen name="NewPlantRecord" component={NewPlantRecordScreen} />
         <Stack.Screen name="PlantDetail" component={PlantDetailScreen} />
+        <Stack.Screen name="BotanistProfile" component={BotanistProfileScreen} />
 
       </Stack.Navigator>
     </NavigationContainer>
