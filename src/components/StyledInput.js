@@ -5,9 +5,9 @@ import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { colors } from '../theme/colors';
 
-export default function StyledInput({ label, error, style, ...props }) {
+export default function StyledInput({ label, error, style, containerStyle, ...props }) {
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, containerStyle]}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
       <TextInput
         style={[styles.input, style]}
