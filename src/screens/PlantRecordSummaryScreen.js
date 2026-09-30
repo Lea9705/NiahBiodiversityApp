@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import QRCode from 'react-native-qrcode-svg';
 import { colors } from '../theme/colors';
 
 export default function PlantRecordSummaryScreen({ navigation, route }) {
@@ -110,6 +111,22 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
           <Text style={styles.notes}>
             {record.notes || 'No notes provided.'}
           </Text>
+        </View>
+
+        {/* QR code */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Plant QR code</Text>
+
+          <View style={styles.qrWrap}>
+            <QRCode
+              value={record.id}
+              size={140}
+              color="#000000"
+              backgroundColor="#FFFFFF"
+            />
+          </View>
+
+          <Text style={styles.qrId}>{record.id}</Text>
         </View>
 
         {/* Actions */}
@@ -238,6 +255,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: colors.textPrimary,
+  },
+
+  qrWrap: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    padding: 16,
+  },
+
+  qrId: {
+    fontSize: 11,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: 8,
   },
 
   actions: {

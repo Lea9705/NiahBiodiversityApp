@@ -14,6 +14,9 @@ import StyledInput from '../components/StyledInput';
 import PrimaryButton from '../components/PrimaryButton';
 
 export default function NewPlantRecordScreen({ navigation }) {
+  const [recordId] = useState(
+  () => `plant_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+  );
   const [photos, setPhotos] = useState([]);
   const [locationError, setLocationError] = useState('');
   const [form, setForm] = useState({
@@ -133,6 +136,7 @@ export default function NewPlantRecordScreen({ navigation }) {
     }
 
     const record = {
+      id: recordId,
       ...form,
       photos,
       createdAt: new Date().toISOString(),
