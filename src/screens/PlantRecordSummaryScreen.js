@@ -11,25 +11,68 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
   const { addRecord } = useRecords();
 
   const handleSend = () => {
-    Alert.alert(
-      'Submit plant record?',
-      'Please confirm that you want to submit this plant record.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Submit',
-          onPress: () => {
-            addRecord(record);
-            Alert.alert(
-              'Record saved',
-              'This plant record has been added. Scan its QR tag anytime this session to view it.'
+  Alert.alert(
+    'Submit plant record?',
+    'Please confirm that you want to submit this plant record.',
+    [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Submit',
+        onPress: async () => {
+          try {
+            const response = await fetch(
+              'http://52.62.125.146/api/plants',
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  scientific_name: record.scientificName,
+                  common_name: record.commonName,
+                  family: record.family,
+                  latitude: Number(record.latitude),
+                  longitude: Number(record.longitude),
+                  height_m: Number(record.height),
+                  diameter_cm: Number(record.diameter),
+                  morphological_notes: record.notes,
+                }),
+              }
             );
-            navigation.navigate('BotanistHome');
-          },
+
+            const data = await response.json();
+
+            if (!response.ok) {
+              throw new Error(data.error || 'Failed to submit plant record.');
+            }
+
+            console.log('Plant created:', data);
+
+            addRecord(data);
+
+            Alert.alert(
+              'Record submitted',
+              `Plant record #${data.id} has been submitted successfully.`,
+              [
+                {
+                  text: 'OK',
+                  onPress: () => navigation.navigate('BotanistHome'),
+                },
+              ]
+            );
+          } catch (error) {
+            console.error('Submit plant error:', error);
+
+            Alert.alert(
+              'Submission failed',
+              error.message || 'Could not submit the plant record.'
+            );
+          }
         },
-      ]
-    );
-  };
+      },
+    ]
+  );
+};
 
   return (
     <SafeAreaView style={styles.container}>
