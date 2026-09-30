@@ -10,3 +10,4 @@ npm-debug.*
 *.orig.*
 web-build/
 .DS_Store
+Expo-Go-57.0.9.tar.app/

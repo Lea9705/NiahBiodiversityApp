@@ -7,6 +7,7 @@ import BotanistLoginScreen from '../screens/BotanistLoginScreen';
 import BotanistHomeScreen from '../screens/BotanistHomeScreen';
 import VisitorHomeScreen from '../screens/VisitorHomeScreen';
 import NewPlantRecordScreen from '../screens/NewPlantRecordScreen';
+import PlantRecordSummaryScreen from '../screens/PlantRecordSummaryScreen';
 import PlantDetailScreen from '../screens/PlantDetailScreen';
 import BotanistProfileScreen from '../screens/BotanistProfileScreen';
 
@@ -29,6 +30,7 @@ export default function AppNavigator() {
         <Stack.Screen name="BotanistHome" component={BotanistHomeScreen} />
         <Stack.Screen name="VisitorHome" component={VisitorHomeScreen} />
         <Stack.Screen name="NewPlantRecord" component={NewPlantRecordScreen} />
+        <Stack.Screen name="PlantRecordSummary" component={PlantRecordSummaryScreen} />
         <Stack.Screen name="PlantDetail" component={PlantDetailScreen} />
         <Stack.Screen name="BotanistProfile" component={BotanistProfileScreen} />
 

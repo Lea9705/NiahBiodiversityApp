@@ -3,7 +3,8 @@
 // placeholders. Saving is still a TODO: right now it just logs the
 // record and shows an alert, instead of writing to local offline storage.
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image, Alert } from 'react-native';
+import {View, Text, TouchableOpacity, StyleSheet, ScrollView, Image, Alert, KeyboardAvoidingView, Platform,} from 'react-native';
+import * as Device from 'expo-device';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -28,20 +29,69 @@ export default function NewPlantRecordScreen({ navigation }) {
 
   const updateField = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 
-  const capturePhoto = async () => {
-  const permission =
-    await ImagePicker.requestCameraPermissionsAsync();
-
-  if (!permission.granted) {
+  const handleBack = () => {
     Alert.alert(
-      'Camera permission needed',
-      'Camera access is required to capture a plant photo.'
+      'Discard plant record?',
+      'You have unsaved changes. If you go back now, all the information and photos you entered will be lost.',
+      [
+        {
+          text: 'Stay',
+          style: 'cancel',
+        },
+        {
+          text: 'Discard',
+          style: 'destructive',
+          onPress: () => navigation.goBack(),
+        },
+      ]
     );
-    return;
-  }
+  };
 
-  try {
-    // Try the real camera first.
+  const capturePhoto = async () => {
+    // iOS Simulator does not have a usable physical camera,
+    // so use the photo library for simulator testing.
+    if (__DEV__ && Platform.OS === 'ios' && Device.isDevice === false) {
+      const libraryPermission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (!libraryPermission.granted) {
+        Alert.alert(
+          'Photo library permission needed',
+          'Allow photo library access to select a test image.'
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.6,
+        allowsMultipleSelection: false,
+      });
+
+      if (!result.canceled && result.assets?.length > 0) {
+        const newPhoto = result.assets[0].uri;
+
+        setPhotos((currentPhotos) => [
+          ...currentPhotos,
+          newPhoto,
+        ]);
+      }
+
+      return;
+    }
+
+    // Physical iPhone: use the real camera.
+    const permission =
+      await ImagePicker.requestCameraPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert(
+        'Camera permission needed',
+        'Camera access is required to capture a plant photo.'
+      );
+      return;
+    }
+
     const result = await ImagePicker.launchCameraAsync({
       quality: 0.6,
     });
@@ -54,36 +104,7 @@ export default function NewPlantRecordScreen({ navigation }) {
         newPhoto,
       ]);
     }
-  } catch (error) {
-    // iOS Simulator does not have a camera,
-    // so fall back to selecting an existing image.
-    const libraryPermission =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (!libraryPermission.granted) {
-      Alert.alert(
-        'Photo library permission needed',
-        'Allow photo library access to select a test image.'
-      );
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.6,
-      allowsMultipleSelection: false,
-    });
-
-    if (!result.canceled && result.assets?.length > 0) {
-      const newPhoto = result.assets[0].uri;
-
-      setPhotos((currentPhotos) => [
-        ...currentPhotos,
-        newPhoto,
-      ]);
-    }
-  }
-};
+  };
 
   const captureLocation = async () => {
       const permission = await Location.requestForegroundPermissionsAsync();
@@ -117,20 +138,24 @@ export default function NewPlantRecordScreen({ navigation }) {
       createdAt: new Date().toISOString(),
     };
 
-    // TODO: save `record` into local offline storage (e.g. WatermelonDB or SQLite)
-    // and add it to a sync queue so it uploads automatically once the device
-    // is back online. Right now it's just logged to the console as a placeholder.
-    console.log('New offline record:', record);
-
-    Alert.alert('Saved offline', "This record will sync automatically when you're back online.");
-    navigation.goBack();
+    navigation.navigate('PlantRecordSummary', {
+      record,
+    });
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: 120 }}
+          keyboardShouldPersistTaps="handled"
+        >
+     
         <View style={styles.header}>
-          <TouchableOpacity style={styles.back} onPress={() => navigation.goBack()}>
+          <TouchableOpacity style={styles.back} onPress={handleBack}>
             <Ionicons name="arrow-back" size={16} color={colors.textSecondary} />
             <Text style={styles.backText}>Back</Text>
           </TouchableOpacity>
@@ -267,11 +292,12 @@ export default function NewPlantRecordScreen({ navigation }) {
         />
 
         <PrimaryButton
-          title="Save record"
+          title="Add Record"
           icon={<Ionicons name="save-outline" size={16} color={colors.buttonText} />}
           onPress={handleSave}
         />
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
