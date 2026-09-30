@@ -1,12 +1,5 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Image,
-} from 'react-native';
+import {View, Text, TouchableOpacity, StyleSheet, ScrollView, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
@@ -14,6 +7,25 @@ import { colors } from '../theme/colors';
 
 export default function PlantRecordSummaryScreen({ navigation, route }) {
   const { record } = route.params;
+
+  const handleSend = () => {
+    Alert.alert(
+      'Submit plant record?',
+      'Please confirm that you want to submit this plant record.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Submit',
+          onPress: () => {
+            console.log('Record ready to submit:', record);
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -145,10 +157,7 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
 
           <TouchableOpacity
             style={styles.sendButton}
-            onPress={() => {
-              // TODO: send record to website/backend
-              console.log('Record ready to submit:', record);
-            }}
+            onPress={handleSend}
           >
             <Ionicons
               name="send-outline"
@@ -157,6 +166,7 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
             />
             <Text style={styles.sendButtonText}>Send</Text>
           </TouchableOpacity>
+
         </View>
       </ScrollView>
     </SafeAreaView>
