@@ -43,7 +43,7 @@ export default function BotanistHomeScreen({ navigation }) {
         <PrimaryButton
           title="Scan QR tag"
           icon={<Ionicons name="scan-outline" size={22} color={colors.buttonText} />}
-          onPress={() => navigation.navigate('NewPlantRecord')}
+          onPress={() => navigation.navigate('ScanQR')}
           style={styles.gridButton}
         />
         <OutlineButton

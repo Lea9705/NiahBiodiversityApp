@@ -1,7 +1,6 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-
 import RoleSelectScreen from '../screens/RoleSelectScreen';
 import BotanistLoginScreen from '../screens/BotanistLoginScreen';
 import BotanistHomeScreen from '../screens/BotanistHomeScreen';
@@ -10,8 +9,8 @@ import NewPlantRecordScreen from '../screens/NewPlantRecordScreen';
 import PlantRecordSummaryScreen from '../screens/PlantRecordSummaryScreen';
 import PlantDetailScreen from '../screens/PlantDetailScreen';
 import BotanistProfileScreen from '../screens/BotanistProfileScreen';
-
 import { colors } from '../theme/colors';
+import ScanQRScreen from '../screens/ScanQRScreen';
 
 const Stack = createStackNavigator();
 
@@ -33,7 +32,8 @@ export default function AppNavigator() {
         <Stack.Screen name="PlantRecordSummary" component={PlantRecordSummaryScreen} />
         <Stack.Screen name="PlantDetail" component={PlantDetailScreen} />
         <Stack.Screen name="BotanistProfile" component={BotanistProfileScreen} />
-
+        <Stack.Screen name="ScanQR" component={ScanQRScreen} />
+        
       </Stack.Navigator>
     </NavigationContainer>
   );

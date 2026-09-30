@@ -4,23 +4,27 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
 import { colors } from '../theme/colors';
+import { useRecords } from '../context/RecordsContext';
 
 export default function PlantRecordSummaryScreen({ navigation, route }) {
-  const { record } = route.params;
+  const { record, readOnly } = route.params;
+  const { addRecord } = useRecords();
 
   const handleSend = () => {
     Alert.alert(
       'Submit plant record?',
       'Please confirm that you want to submit this plant record.',
       [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Submit',
           onPress: () => {
-            console.log('Record ready to submit:', record);
+            addRecord(record);
+            Alert.alert(
+              'Record saved',
+              'This plant record has been added. Scan its QR tag anytime this session to view it.'
+            );
+            navigation.navigate('BotanistHome');
           },
         },
       ]
@@ -142,6 +146,7 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
         </View>
 
         {/* Actions */}
+        {!readOnly && (
         <View style={styles.actions}>
           <TouchableOpacity
             style={styles.editButton}
@@ -168,6 +173,7 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
           </TouchableOpacity>
 
         </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
