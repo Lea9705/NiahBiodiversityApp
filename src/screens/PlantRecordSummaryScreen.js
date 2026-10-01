@@ -87,6 +87,7 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
               size={16}
               color={colors.textSecondary}
             />
+            
             <Text style={styles.backText}>Back</Text>
           </TouchableOpacity>
         </View>

@@ -61,19 +61,18 @@ export default function ActivitiesScreen({ navigation }) {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
+          style={styles.back}
           onPress={() => navigation.goBack()}
-          style={styles.backButton}
         >
           <Ionicons
             name="arrow-back"
-            size={22}
-            color={colors.textPrimary}
+            size={16}
+            color={colors.textSecondary}
           />
+          <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
 
-        <Text style={styles.title}>My Activities</Text>
-
-        <View style={styles.headerSpacer} />
+        <Text style={styles.title} pointerEvents="none"> My Activities </Text>
       </View>
 
       {/* Filter tabs */}
@@ -164,27 +163,32 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
+  height: 40,
+  justifyContent: 'center',
+  position: 'relative',
+  marginBottom: 16,
   },
 
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
+  back: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 4,
+  alignSelf: 'flex-start',
+  },  
+
+  backText: {
+  fontSize: 13,
+  color: colors.textSecondary,
   },
 
   title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-
-  headerSpacer: {
-    width: 40,
+  position: 'absolute',
+  left: 0,
+  right: 0,
+  textAlign: 'center',
+  fontSize: 18,
+  fontWeight: '600',
+  color: colors.textPrimary,
   },
 
   filters: {

@@ -49,15 +49,31 @@ const DUMMY_PLANTS = [
 export default function RecordsScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container}>
-      <TouchableOpacity style={styles.back} onPress={() => navigation.goBack()}>
-        <Ionicons name="arrow-back" size={16} color={colors.textSecondary} />
-        <Text style={styles.backText}>Back</Text>
-      </TouchableOpacity>
 
       <View style={styles.header}>
-        <Text style={styles.title}>Plant records</Text>
-        <Text style={styles.subtitle}>{DUMMY_PLANTS.length} total</Text>
+        <TouchableOpacity
+          style={styles.back}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons
+            name="arrow-back"
+            size={16}
+            color={colors.textSecondary}
+          />
+          <Text style={styles.backText}>Back</Text>
+        </TouchableOpacity>
+
+        <Text
+          style={styles.title}
+          pointerEvents="none"
+        >
+          Plant Records
+        </Text>
       </View>
+
+      <Text style={styles.subtitle}>
+        {DUMMY_PLANTS.length} total
+      </Text>
 
       <FlatList
         data={DUMMY_PLANTS}
@@ -85,9 +101,9 @@ export default function RecordsScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg, padding: 16 },
-  back: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 16 },
+  back: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', },
   backText: { color: colors.textSecondary, fontSize: 13 },
-  header: { marginBottom: 16 },
-  title: { fontSize: 18, fontWeight: '600', color: colors.textPrimary },
-  subtitle: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+  header: { height: 40, justifyContent: 'center', position: 'relative', marginBottom: 4, },
+  title: { position: 'absolute',left: 0, right: 0, textAlign: 'center', fontSize: 18, fontWeight: '600', color: colors.textPrimary, },
+  subtitle: { fontSize: 12, color: colors.textSecondary, marginBottom: 16, },
 });
