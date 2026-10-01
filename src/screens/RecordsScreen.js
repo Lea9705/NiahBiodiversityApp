@@ -75,6 +75,15 @@ export default function RecordsScreen({ navigation }) {
         {DUMMY_PLANTS.length} total
       </Text>
 
+      <TouchableOpacity
+        style={{ alignSelf: 'flex-start', marginBottom: 12 }}
+        onPress={() => navigation.navigate('SyncDemo')}
+      >
+        <Text style={{ fontSize: 11, color: colors.textMuted, textDecorationLine: 'underline' }}>
+          Open sync demo (testing)
+        </Text>
+      </TouchableOpacity>
+
       <FlatList
         data={DUMMY_PLANTS}
         keyExtractor={(item) => item.id}
