@@ -98,8 +98,10 @@ export default function BotanistHomeScreen({ navigation }) {
           { icon: 'location-outline', label: 'Map' },
           { icon: 'person-outline', label: 'Profile' },
         ]}
-        onPress={(index) => {
-          if (index === 3) {
+          onPress={(index) => {
+          if (index === 1) {
+            navigation.navigate('Records');
+          } else if (index === 3) {
             navigation.navigate('BotanistProfile');
           }
         }}
