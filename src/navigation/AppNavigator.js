@@ -11,6 +11,7 @@ import PlantDetailScreen from '../screens/PlantDetailScreen';
 import BotanistProfileScreen from '../screens/BotanistProfileScreen';
 import { colors } from '../theme/colors';
 import ScanQRScreen from '../screens/ScanQRScreen';
+import ActivitiesScreen from '../screens/ActivitiesScreen';
 
 const Stack = createStackNavigator();
 
@@ -33,6 +34,7 @@ export default function AppNavigator() {
         <Stack.Screen name="PlantDetail" component={PlantDetailScreen} />
         <Stack.Screen name="BotanistProfile" component={BotanistProfileScreen} />
         <Stack.Screen name="ScanQR" component={ScanQRScreen} />
+        <Stack.Screen name="Activities" component={ActivitiesScreen} />
         
       </Stack.Navigator>
     </NavigationContainer>

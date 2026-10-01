@@ -3,7 +3,7 @@
 // as your contact_list.js lab, just swap DUMMY_RECORDS for real local
 // storage + synced API data once that's ready.
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
@@ -56,6 +56,24 @@ export default function BotanistHomeScreen({ navigation }) {
 
       <StyledInput placeholder="Search species or record" value={search} onChangeText={setSearch} />
 
+      <TouchableOpacity
+        style={styles.activitiesCard}
+        onPress={() => navigation.navigate('Activities')}
+      >
+        <View>
+          <Text style={styles.activitiesTitle}>My Activities</Text>
+          <Text style={styles.activitiesSubtitle}>
+            {pendingCount} pending submission{pendingCount !== 1 ? 's' : ''}
+          </Text>
+        </View>
+
+        <Ionicons
+          name="chevron-forward"
+          size={20}
+          color={colors.textSecondary}
+        />
+      </TouchableOpacity>
+
       <Text style={styles.sectionLabel}>Recent records</Text>
 
       <FlatList
@@ -101,4 +119,7 @@ const styles = StyleSheet.create({
   grid2: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   gridButton: { flex: 1, flexDirection: 'column', paddingVertical: 16 },
   sectionLabel: { fontSize: 12, color: colors.textMuted, marginBottom: 8 },
+  activitiesCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.surface, padding: 14, borderRadius: 12, marginBottom: 16, },
+  activitiesTitle: { fontSize: 14, fontWeight: '600', color: colors.textPrimary, },
+  activitiesSubtitle: { fontSize: 12, color: colors.textSecondary, marginTop: 4, },
 });
