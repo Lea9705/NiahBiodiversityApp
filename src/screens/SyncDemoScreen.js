@@ -2,13 +2,18 @@
 // mechanism to the team. Entirely self-contained - does not touch
 // PlantRecordSummaryScreen or any real backend. Starts empty on purpose,
 // so you can watch a record move: added -> local/pending -> synced/cloud.
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, Switch, Alert } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
-const SAMPLE_NAMES = ['Shorea curtisii', 'Nepenthes ampullaria', 'Dipterocarpus caudatus', 'Rafflesia tuan-mudae'];
+const SAMPLE_PLANTS = [
+  { scientificName: 'Shorea curtisii', commonName: 'Seraya', family: 'Dipterocarpaceae', height: '28.5', diameter: '45', latitude: '3.841200', longitude: '113.769100', notes: 'Mature tree, buttress roots visible.' },
+  { scientificName: 'Nepenthes ampullaria', commonName: 'Pitcher plant', family: 'Nepenthaceae', height: '0.3', diameter: '', latitude: '3.839800', longitude: '113.770400', notes: 'Growing near cave entrance, ground pitchers.' },
+  { scientificName: 'Dipterocarpus caudatus', commonName: 'Keruing', family: 'Dipterocarpaceae', height: '35', diameter: '60', latitude: '3.842700', longitude: '113.768500', notes: '' },
+  { scientificName: 'Rafflesia tuan-mudae', commonName: 'Rafflesia', family: 'Rafflesiaceae', height: '0.1', diameter: '', latitude: '3.838500', longitude: '113.771200', notes: 'In bloom, single flower observed.' },
+];
 
 export default function SyncDemoScreen({ navigation }) {
   const [localDB, setLocalDB] = useState([]);
@@ -16,40 +21,61 @@ export default function SyncDemoScreen({ navigation }) {
   const [isOnline, setIsOnline] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
+  // Refs instead of state for the background checker below, so it always
+  // reads the latest value without needing to restart itself.
+  const isOnlineRef = useRef(false);
+  const syncingRef = useRef(false);
+
+  useEffect(() => {
+    isOnlineRef.current = isOnline;
+  }, [isOnline]);
+
   const addDummyRecord = () => {
-    const name = SAMPLE_NAMES[localDB.length % SAMPLE_NAMES.length];
+    const base = SAMPLE_PLANTS[localDB.length % SAMPLE_PLANTS.length];
     const record = {
       id: `plant_${Date.now()}`,
-      name,
+      ...base,
+      photos: [],
       status: 'pending',
     };
-    // Mirrors the real rule: writing to local always happens immediately,
+    // Mirrors the real rule: writing to local always happens instantly,
     // regardless of connectivity.
     setLocalDB((current) => [...current, record]);
   };
 
-  const syncNow = () => {
-    if (!isOnline) {
-      Alert.alert('No internet', 'Records stay in the local database until a connection is available.');
-      return;
-    }
+  // A single background check, created once on mount and never torn down
+  // or restarted - that's what prevents a new record from cancelling a
+  // sync that's already in progress. It polls every 400ms: if online,
+  // not already mid-sync, and something's pending, it starts one.
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      if (!isOnlineRef.current || syncingRef.current) return;
 
-    const pending = localDB.filter((r) => r.status === 'pending');
-    if (pending.length === 0) {
-      Alert.alert('Nothing to sync', 'All records are already synced.');
-      return;
-    }
+      setLocalDB((current) => {
+        const pending = current.filter((r) => r.status === 'pending');
+        if (pending.length === 0) return current;
 
-    setSyncing(true);
-    // Simulated network delay, same idea as a real API call taking a moment.
-    setTimeout(() => {
-      setCloudDB((current) => [...current, ...pending]);
-      setLocalDB((current) =>
-        current.map((r) => (r.status === 'pending' ? { ...r, status: 'synced' } : r))
-      );
-      setSyncing(false);
-    }, 1200);
-  };
+        syncingRef.current = true;
+        setSyncing(true);
+
+        // Simulated network delay, same idea as a real API call taking a moment.
+        setTimeout(() => {
+          setCloudDB((cloud) => [...cloud, ...pending]);
+          setLocalDB((latest) =>
+            latest.map((r) =>
+              pending.some((p) => p.id === r.id) ? { ...r, status: 'synced' } : r
+            )
+          );
+          syncingRef.current = false;
+          setSyncing(false);
+        }, 1200);
+
+        return current;
+      });
+    }, 400);
+
+    return () => clearInterval(intervalId);
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -69,21 +95,17 @@ export default function SyncDemoScreen({ navigation }) {
         <Switch value={isOnline} onValueChange={setIsOnline} />
       </View>
 
-      <View style={styles.actionsRow}>
-        <TouchableOpacity style={styles.actionButton} onPress={addDummyRecord}>
-          <Ionicons name="add" size={18} color={colors.textPrimary} />
-          <Text style={styles.actionButtonText}>Add dummy record</Text>
-        </TouchableOpacity>
+      <TouchableOpacity style={styles.actionButton} onPress={addDummyRecord}>
+        <Ionicons name="add" size={18} color={colors.textPrimary} />
+        <Text style={styles.actionButtonText}>Add dummy record</Text>
+      </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.actionButton, styles.syncButton]}
-          onPress={syncNow}
-          disabled={syncing}
-        >
-          <Ionicons name="sync" size={18} color={colors.buttonText} />
-          <Text style={styles.syncButtonText}>{syncing ? 'Syncing…' : 'Sync now'}</Text>
-        </TouchableOpacity>
-      </View>
+      {syncing && (
+        <View style={styles.syncingBanner}>
+          <Ionicons name="sync" size={14} color={colors.accentText} />
+          <Text style={styles.syncingText}>Syncing to cloud…</Text>
+        </View>
+      )}
 
       <View style={styles.columns}>
         <View style={styles.column}>
@@ -94,8 +116,11 @@ export default function SyncDemoScreen({ navigation }) {
             keyExtractor={(item) => item.id}
             ListEmptyComponent={<Text style={styles.emptyText}>Empty</Text>}
             renderItem={({ item }) => (
-              <View style={styles.recordRow}>
-                <Text style={styles.recordName} numberOfLines={1}>{item.name}</Text>
+              <TouchableOpacity
+                style={styles.recordRow}
+                onPress={() => navigation.navigate('PlantRecordSummary', { record: item, readOnly: true })}
+              >
+                <Text style={styles.recordName} numberOfLines={1}>{item.scientificName}</Text>
                 <Text
                   style={[
                     styles.recordStatus,
@@ -104,7 +129,7 @@ export default function SyncDemoScreen({ navigation }) {
                 >
                   {item.status}
                 </Text>
-              </View>
+              </TouchableOpacity>
             )}
           />
         </View>
@@ -117,9 +142,12 @@ export default function SyncDemoScreen({ navigation }) {
             keyExtractor={(item) => item.id}
             ListEmptyComponent={<Text style={styles.emptyText}>Empty</Text>}
             renderItem={({ item }) => (
-              <View style={styles.recordRow}>
-                <Text style={styles.recordName} numberOfLines={1}>{item.name}</Text>
-              </View>
+              <TouchableOpacity
+                style={styles.recordRow}
+                onPress={() => navigation.navigate('PlantRecordSummary', { record: item, readOnly: true })}
+              >
+                <Text style={styles.recordName} numberOfLines={1}>{item.scientificName}</Text>
+              </TouchableOpacity>
             )}
           />
         </View>
@@ -137,11 +165,10 @@ const styles = StyleSheet.create({
   onlineRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.surfaceAlt, borderRadius: 10, padding: 14, marginBottom: 16 },
   onlineLabel: { fontSize: 12, color: colors.textSecondary },
   onlineValue: { fontSize: 14, fontWeight: '600', color: colors.textPrimary, marginTop: 2 },
-  actionsRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
-  actionButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.surfaceAlt, borderWidth: 0.5, borderColor: colors.border, borderRadius: 8, paddingVertical: 12 },
+  actionButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.surfaceAlt, borderWidth: 0.5, borderColor: colors.border, borderRadius: 8, paddingVertical: 12, marginBottom: 12 },
   actionButtonText: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
-  syncButton: { backgroundColor: colors.accentText, borderWidth: 0 },
-  syncButtonText: { fontSize: 13, fontWeight: '600', color: colors.buttonText },
+  syncingBanner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 20 },
+  syncingText: { fontSize: 12, color: colors.accentText },
   columns: { flex: 1, flexDirection: 'row', gap: 10 },
   column: { flex: 1, backgroundColor: colors.surfaceAlt, borderRadius: 10, padding: 12 },
   columnTitle: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
