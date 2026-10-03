@@ -1,14 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {View, Text, TouchableOpacity, StyleSheet, ScrollView, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
 import { colors } from '../theme/colors';
 import { useRecords } from '../context/RecordsContext';
+import { uploadAllPhotos } from '../utils/uploadPhoto';
 
 export default function PlantRecordSummaryScreen({ navigation, route }) {
   const { record, readOnly } = route.params;
   const { addRecord } = useRecords();
+  const [uploading, setUploading] = useState(false);
 
   const handleSend = () => {
   Alert.alert(
@@ -16,10 +18,18 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
     'Please confirm that you want to submit this plant record.',
     [
       { text: 'Cancel', style: 'cancel' },
-      {
+{
         text: 'Submit',
         onPress: async () => {
           try {
+            let photoUrls = [];
+
+            if (record.photos?.length > 0) {
+              setUploading(true);
+              photoUrls = await uploadAllPhotos(record.photos, record);
+              setUploading(false);
+            }
+
             const response = await fetch(
               'http://52.62.125.146/api/plants',
               {
@@ -36,6 +46,7 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
                   height_m: Number(record.height),
                   diameter_cm: Number(record.diameter),
                   morphological_notes: record.notes,
+                  photos: photoUrls,
                 }),
               }
             );
@@ -62,6 +73,7 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
             );
           } catch (error) {
             console.error('Submit plant error:', error);
+            setUploading(false);
 
             Alert.alert(
               'Submission failed',
@@ -207,13 +219,16 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
           <TouchableOpacity
             style={styles.sendButton}
             onPress={handleSend}
+            disabled={uploading}
           >
             <Ionicons
-              name="send-outline"
+              name={uploading ? 'cloud-upload-outline' : 'send-outline'}
               size={18}
               color={colors.buttonText}
             />
-            <Text style={styles.sendButtonText}>Send</Text>
+            <Text style={styles.sendButtonText}>
+              {uploading ? 'Uploading photos…' : 'Send'}
+            </Text>
           </TouchableOpacity>
 
         </View>
