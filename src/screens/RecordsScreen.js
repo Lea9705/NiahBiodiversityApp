@@ -1,52 +1,16 @@
-// Dummy version for testing the list -> detail flow, no backend call.
-// Swap DUMMY_PLANTS for a real fetch() once the backend is confirmed working.
+// Shows plant records saved on this phone (via SQLite-backed
+// RecordsContext). Tapping one opens the review screen in read-only mode.
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import RecordListItem from '../components/RecordListItem';
-
-const DUMMY_PLANTS = [
-  {
-    id: '1',
-    scientificName: 'Shorea curtisii',
-    commonName: 'Seraya',
-    family: 'Dipterocarpaceae',
-    latitude: '3.841200',
-    longitude: '113.769100',
-    height: '28.5',
-    diameter: '45',
-    notes: 'Mature tree, buttress roots visible.',
-    photos: [],
-  },
-  {
-    id: '2',
-    scientificName: 'Nepenthes ampullaria',
-    commonName: 'Pitcher plant',
-    family: 'Nepenthaceae',
-    latitude: '3.839800',
-    longitude: '113.770400',
-    height: '0.3',
-    diameter: '',
-    notes: 'Growing near cave entrance, ground pitchers.',
-    photos: [],
-  },
-  {
-    id: '3',
-    scientificName: 'Dipterocarpus caudatus',
-    commonName: 'Keruing',
-    family: 'Dipterocarpaceae',
-    latitude: '3.842700',
-    longitude: '113.768500',
-    height: '35',
-    diameter: '60',
-    notes: '',
-    photos: [],
-  },
-];
+import { useRecords } from '../context/RecordsContext';
 
 export default function RecordsScreen({ navigation }) {
+  const { records, loading } = useRecords();
+
   return (
     <SafeAreaView style={styles.container}>
 
@@ -72,38 +36,40 @@ export default function RecordsScreen({ navigation }) {
       </View>
 
       <Text style={styles.subtitle}>
-        {DUMMY_PLANTS.length} total
+        {records.length} total
       </Text>
 
-      <TouchableOpacity
-        style={{ alignSelf: 'flex-start', marginBottom: 12 }}
-        onPress={() => navigation.navigate('SyncDemo')}
-      >
-        <Text style={{ fontSize: 11, color: colors.textMuted, textDecorationLine: 'underline' }}>
-          Open sync demo (testing)
-        </Text>
-      </TouchableOpacity>
-
-      <FlatList
-        data={DUMMY_PLANTS}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <RecordListItem
-            title={item.scientificName}
-            subtitle={item.commonName}
-            iconName="leaf-outline"
-            iconColor={colors.successText}
-            iconBg={colors.successBg}
-            showChevron
-            onPress={() =>
-              navigation.navigate('PlantRecordSummary', {
-                record: item,
-                readOnly: true,
-              })
-            }
-          />
-        )}
-      />
+      {loading ? (
+        <View style={styles.centerBox}>
+          <ActivityIndicator color={colors.accentText} />
+        </View>
+      ) : (
+        <FlatList
+          data={records}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <RecordListItem
+              title={item.scientificName || 'Unnamed record'}
+              subtitle={item.commonName || 'No common name'}
+              iconName="leaf-outline"
+              iconColor={colors.successText}
+              iconBg={colors.successBg}
+              showChevron
+              onPress={() =>
+                navigation.navigate('PlantRecordSummary', {
+                  record: item,
+                  readOnly: true,
+                })
+              }
+            />
+          )}
+          ListEmptyComponent={
+            <View style={styles.centerBox}>
+              <Text style={styles.emptyText}>No plant records yet.</Text>
+            </View>
+          }
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -115,4 +81,6 @@ const styles = StyleSheet.create({
   header: { height: 40, justifyContent: 'center', position: 'relative', marginBottom: 4, },
   title: { position: 'absolute',left: 0, right: 0, textAlign: 'center', fontSize: 18, fontWeight: '600', color: colors.textPrimary, },
   subtitle: { fontSize: 12, color: colors.textSecondary, marginBottom: 16, },
+  centerBox: { alignItems: 'center', justifyContent: 'center', paddingTop: 60 },
+  emptyText: { fontSize: 13, color: colors.textMuted },
 });

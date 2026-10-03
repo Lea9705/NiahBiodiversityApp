@@ -9,82 +9,85 @@ import { uploadAllPhotos } from '../utils/uploadPhoto';
 
 export default function PlantRecordSummaryScreen({ navigation, route }) {
   const { record, readOnly } = route.params;
-  const { addRecord } = useRecords();
+  const { addRecord, updateRecordStatus } = useRecords();
   const [uploading, setUploading] = useState(false);
 
   const handleSend = () => {
-  Alert.alert(
-    'Submit plant record?',
-    'Please confirm that you want to submit this plant record.',
-    [
-      { text: 'Cancel', style: 'cancel' },
-{
-        text: 'Submit',
-        onPress: async () => {
-          try {
-            let photoUrls = [];
+    Alert.alert(
+      'Submit plant record?',
+      'Please confirm that you want to submit this plant record.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Submit',
+          onPress: async () => {
+            // Save locally FIRST, always - before touching the network at
+            // all. This is the offline-first rule: the record exists safely
+            // on the phone the moment the user confirms, regardless of
+            // what happens next.
+            await addRecord(record);
 
-            if (record.photos?.length > 0) {
-              setUploading(true);
-              photoUrls = await uploadAllPhotos(record.photos, record);
-              setUploading(false);
-            }
+            try {
+              let photoUrls = [];
 
-            const response = await fetch(
-              'http://52.62.125.146/api/plants',
-              {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  scientific_name: record.scientificName,
-                  common_name: record.commonName,
-                  family: record.family,
-                  latitude: Number(record.latitude),
-                  longitude: Number(record.longitude),
-                  height_m: Number(record.height),
-                  diameter_cm: Number(record.diameter),
-                  morphological_notes: record.notes,
-                  photos: photoUrls,
-                }),
+              if (record.photos?.length > 0) {
+                setUploading(true);
+                photoUrls = await uploadAllPhotos(record.photos, record);
+                setUploading(false);
               }
-            );
 
-            const data = await response.json();
-
-            if (!response.ok) {
-              throw new Error(data.error || 'Failed to submit plant record.');
-            }
-
-            console.log('Plant created:', data);
-
-            addRecord(data);
-
-            Alert.alert(
-              'Record submitted',
-              `Plant record #${data.id} has been submitted successfully.`,
-              [
+              const response = await fetch(
+                'http://52.62.125.146/api/plants',
                 {
-                  text: 'OK',
-                  onPress: () => navigation.navigate('BotanistHome'),
-                },
-              ]
-            );
-          } catch (error) {
-            console.error('Submit plant error:', error);
-            setUploading(false);
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    scientific_name: record.scientificName,
+                    common_name: record.commonName,
+                    family: record.family,
+                    latitude: Number(record.latitude),
+                    longitude: Number(record.longitude),
+                    height_m: Number(record.height),
+                    diameter_cm: Number(record.diameter),
+                    morphological_notes: record.notes,
+                    photos: photoUrls,
+                  }),
+                }
+              );
 
-            Alert.alert(
-              'Submission failed',
-              error.message || 'Could not submit the plant record.'
-            );
-          }
+              const data = await response.json();
+
+              if (!response.ok) {
+                throw new Error(data.error || 'Failed to submit plant record.');
+              }
+
+              // Only now, after a real successful cloud submission, mark
+              // the already-saved local copy as synced.
+              await updateRecordStatus(record.id, 'synced');
+
+              Alert.alert(
+                'Record submitted',
+                `Plant record #${data.id} has been submitted successfully.`,
+                [{ text: 'OK', onPress: () => navigation.navigate('BotanistHome') }]
+              );
+            } catch (error) {
+              console.error('Submit plant error:', error);
+              setUploading(false);
+
+              // The record is already saved locally from the step above -
+              // this isn't a failure to lose data over, just a sync that
+              // hasn't happened yet.
+              Alert.alert(
+                'Saved on this phone',
+                "Couldn't reach the server right now, but your record is safely saved. It'll sync once the connection issue is resolved.",
+                [{ text: 'OK', onPress: () => navigation.navigate('BotanistHome') }]
+              );
+            }
+          },
         },
-      },
-    ]
-  );
-};
+      ]
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>

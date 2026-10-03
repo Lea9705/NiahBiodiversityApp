@@ -13,7 +13,6 @@ import { colors } from '../theme/colors';
 import ScanQRScreen from '../screens/ScanQRScreen';
 import ActivitiesScreen from '../screens/ActivitiesScreen';
 import RecordsScreen from '../screens/RecordsScreen';
-import SyncDemoScreen from '../screens/SyncDemoScreen';
 
 const Stack = createStackNavigator();
 
@@ -38,7 +37,6 @@ export default function AppNavigator() {
         <Stack.Screen name="ScanQR" component={ScanQRScreen} />
         <Stack.Screen name="Activities" component={ActivitiesScreen} />
         <Stack.Screen name="Records" component={RecordsScreen} />
-        <Stack.Screen name="SyncDemo" component={SyncDemoScreen} />
 
       </Stack.Navigator>
     </NavigationContainer>
