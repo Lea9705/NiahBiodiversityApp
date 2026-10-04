@@ -1,29 +1,78 @@
-// Uploads a single local photo to S3 via a presigned URL, and returns
-// the final public URL to store in the plant record.
+// Uploads photos to S3 using a presigned PUT link that is signed on the
+// phone (AWS Signature V4, no AWS SDK needed). The upload itself is a
+// plain fetch PUT.
 //
-// PLACEHOLDER: swap this for your friend's real endpoint once he sends it.
-const PRESIGN_ENDPOINT = 'http://52.62.125.146/api/presign-upload';
+// When the backend's presign route exists, replace createPresignedUpload()
+// with a call to it. Nothing else in this file needs to change.
+import HmacSHA256 from 'crypto-js/hmac-sha256';
+import SHA256 from 'crypto-js/sha256';
+import Hex from 'crypto-js/enc-hex';
+
+const ACCESS_KEY = process.env.EXPO_PUBLIC_AWS_ACCESS_KEY_ID;
+const SECRET_KEY = process.env.EXPO_PUBLIC_AWS_SECRET_ACCESS_KEY;
+const REGION = process.env.EXPO_PUBLIC_AWS_REGION;
+const BUCKET = process.env.EXPO_PUBLIC_S3_BUCKET;
+
+function createPresignedUpload(fileName) {
+  if (!ACCESS_KEY || !SECRET_KEY || !REGION || !BUCKET) {
+    throw new Error('AWS settings are missing. Check your .env file and restart with: npx expo start -c');
+  }
+
+  const key = `plants/${fileName}`;
+  const host = `${BUCKET}.s3.${REGION}.amazonaws.com`;
+  const canonicalUri = '/' + key.split('/').map(encodeURIComponent).join('/');
+
+  // e.g. 20261004T081530Z
+  const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '');
+  const dateStamp = amzDate.slice(0, 8);
+  const scope = `${dateStamp}/${REGION}/s3/aws4_request`;
+
+  const params = {
+    'X-Amz-Algorithm': 'AWS4-HMAC-SHA256',
+    'X-Amz-Credential': `${ACCESS_KEY}/${scope}`,
+    'X-Amz-Date': amzDate,
+    'X-Amz-Expires': '300',
+    'X-Amz-SignedHeaders': 'host',
+  };
+
+  const canonicalQuery = Object.keys(params)
+    .sort()
+    .map((k) => `${encodeURIComponent(k)}=${encodeURIComponent(params[k])}`)
+    .join('&');
+
+  const canonicalRequest = [
+    'PUT',
+    canonicalUri,
+    canonicalQuery,
+    `host:${host}\n`,
+    'host',
+    'UNSIGNED-PAYLOAD',
+  ].join('\n');
+
+  const stringToSign = [
+    'AWS4-HMAC-SHA256',
+    amzDate,
+    scope,
+    SHA256(canonicalRequest).toString(Hex),
+  ].join('\n');
+
+  const kDate = HmacSHA256(dateStamp, `AWS4${SECRET_KEY}`);
+  const kRegion = HmacSHA256(REGION, kDate);
+  const kService = HmacSHA256('s3', kRegion);
+  const kSigning = HmacSHA256('aws4_request', kService);
+  const signature = HmacSHA256(stringToSign, kSigning).toString(Hex);
+
+  return {
+    uploadUrl: `https://${host}${canonicalUri}?${canonicalQuery}&X-Amz-Signature=${signature}`,
+    fileUrl: `https://${host}${canonicalUri}`,
+  };
+}
 
 export async function uploadPhotoToS3(localUri, plantContext) {
   const fileName = `${plantContext.id || Date.now()}_${Date.now()}.jpg`;
 
-  // Step 1: ask the backend for a presigned URL to upload to.
-  const presignResponse = await fetch(PRESIGN_ENDPOINT, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      fileName,
-      contentType: 'image/jpeg',
-    }),
-  });
+  const { uploadUrl, fileUrl } = createPresignedUpload(fileName);
 
-  if (!presignResponse.ok) {
-    throw new Error('Could not get an upload link from the server.');
-  }
-
-  const { uploadUrl, fileUrl } = await presignResponse.json();
-
-  // Step 2: read the local photo file and upload it directly to S3.
   const fileResponse = await fetch(localUri);
   const blob = await fileResponse.blob();
 
@@ -34,21 +83,18 @@ export async function uploadPhotoToS3(localUri, plantContext) {
   });
 
   if (!uploadResult.ok) {
-    throw new Error('Photo upload to storage failed.');
+    const detail = await uploadResult.text();
+    console.log('S3 upload error:', uploadResult.status, detail);
+    throw new Error(`Photo upload failed (${uploadResult.status}).`);
   }
 
-  // Step 3: return the final URL - this is what gets saved in the
-  // plant record, not the local device file path.
   return fileUrl;
 }
 
-// Uploads every photo in a record, one at a time, and returns the array
-// of resulting S3 URLs in the same order.
 export async function uploadAllPhotos(photoUris, plantContext) {
   const uploadedUrls = [];
   for (const uri of photoUris) {
-    const url = await uploadPhotoToS3(uri, plantContext);
-    uploadedUrls.push(url);
+    uploadedUrls.push(await uploadPhotoToS3(uri, plantContext));
   }
   return uploadedUrls;
 }

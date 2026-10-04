@@ -1,18 +1,27 @@
-// Records are now stored permanently in SQLite, on the phone itself -
-// they survive closing the app, restarting the phone, everything.
-// The public interface (records, addRecord, findRecordById) stays
-// exactly the same as the old in-memory version, so no other screen
-// needs to change.
-import React, { createContext, useContext, useState, useEffect } from 'react';
+// Records are stored permanently in SQLite, on the phone itself. This
+// context also watches the device's real network status and
+// automatically retries any "pending" record in the background whenever
+// a connection is available - no manual button needed.
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import NetInfo from '@react-native-community/netinfo';
 import { getDatabase } from '../db/database';
+import { syncRecordToCloud } from '../utils/syncRecord';
 
 const RecordsContext = createContext(null);
 
 export function RecordsProvider({ children }) {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isOnline, setIsOnline] = useState(false);
 
-  // Load everything already saved on this phone, once, when the app starts.
+  const isOnlineRef = useRef(false);
+  const syncingRef = useRef(false);
+  const recordsRef = useRef([]);
+
+  useEffect(() => {
+    recordsRef.current = records;
+  }, [records]);
+
   useEffect(() => {
     (async () => {
       const db = await getDatabase();
@@ -23,9 +32,17 @@ export function RecordsProvider({ children }) {
     })();
   }, []);
 
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      const online = !!state.isConnected && state.isInternetReachable !== false;
+      setIsOnline(online);
+      isOnlineRef.current = online;
+    });
+    return () => unsubscribe();
+  }, []);
+
   const addRecord = async (record) => {
     const db = await getDatabase();
-
     const toSave = {
       id: record.id,
       scientificName: record.scientificName || '',
@@ -54,16 +71,42 @@ export function RecordsProvider({ children }) {
     setRecords((current) => [{ ...record, photos: record.photos || [] }, ...current]);
   };
 
-    const findRecordById = (id) => records.find((r) => r.id === id);
+  const findRecordById = (id) => records.find((r) => r.id === id);
 
-    const updateRecordStatus = async (id, status) => {
-        const db = await getDatabase();
-        await db.runAsync('UPDATE plants SET status = ? WHERE id = ?', [status, id]);
-        setRecords((current) => current.map((r) => (r.id === id ? { ...r, status } : r)));
-    };
+  const updateRecordStatus = async (id, status) => {
+    const db = await getDatabase();
+    await db.runAsync('UPDATE plants SET status = ? WHERE id = ?', [status, id]);
+    setRecords((current) => current.map((r) => (r.id === id ? { ...r, status } : r)));
+  };
+
+  useEffect(() => {
+    const intervalId = setInterval(async () => {
+      if (!isOnlineRef.current || syncingRef.current) return;
+
+      const pending = recordsRef.current.filter((r) => r.status === 'pending');
+      if (pending.length === 0) return;
+
+      syncingRef.current = true;
+
+      for (const record of pending) {
+        try {
+          await syncRecordToCloud(record);
+          await updateRecordStatus(record.id, 'synced');
+        } catch (e) {
+          console.log('Background sync failed for', record.id, e.message);
+        }
+      }
+
+      syncingRef.current = false;
+    }, 5000);
+
+    return () => clearInterval(intervalId);
+  }, []);
 
   return (
-    <RecordsContext.Provider value={{ records, addRecord, findRecordById, updateRecordStatus, loading }}>
+    <RecordsContext.Provider
+      value={{ records, addRecord, findRecordById, updateRecordStatus, isOnline, loading }}
+    >
       {children}
     </RecordsContext.Provider>
   );

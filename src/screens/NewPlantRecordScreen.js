@@ -1,7 +1,5 @@
 // The plant registration form. Photo capture and GPS are wired to real
-// device APIs (expo-image-picker, expo-location) - not just visual
-// placeholders. Saving is still a TODO: right now it just logs the
-// record and shows an alert, instead of writing to local offline storage.
+// device APIs.
 import React, { useState, useEffect } from 'react';
 import {View, Text, TouchableOpacity, StyleSheet, ScrollView, Image, Alert, KeyboardAvoidingView, Platform,} from 'react-native';
 import * as Device from 'expo-device';
@@ -15,7 +13,7 @@ import PrimaryButton from '../components/PrimaryButton';
 
 export default function NewPlantRecordScreen({ navigation }) {
   const [recordId] = useState(
-  () => `plant_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+    () => `plant_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
   );
   const [photos, setPhotos] = useState([]);
   const [locationError, setLocationError] = useState('');
@@ -28,7 +26,7 @@ export default function NewPlantRecordScreen({ navigation }) {
     latitude: '',
     longitude: '',
     notes: '',
-  }); 
+  });
 
   const updateField = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -37,31 +35,18 @@ export default function NewPlantRecordScreen({ navigation }) {
       'Discard plant record?',
       'You have unsaved changes. If you go back now, all the information and photos you entered will be lost.',
       [
-        {
-          text: 'Stay',
-          style: 'cancel',
-        },
-        {
-          text: 'Discard',
-          style: 'destructive',
-          onPress: () => navigation.goBack(),
-        },
+        { text: 'Stay', style: 'cancel' },
+        { text: 'Discard', style: 'destructive', onPress: () => navigation.goBack() },
       ]
     );
   };
 
   const capturePhoto = async () => {
-    // iOS Simulator does not have a usable physical camera,
-    // so use the photo library for simulator testing.
     if (__DEV__ && Platform.OS === 'ios' && Device.isDevice === false) {
-      const libraryPermission =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const libraryPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (!libraryPermission.granted) {
-        Alert.alert(
-          'Photo library permission needed',
-          'Allow photo library access to select a test image.'
-        );
+        Alert.alert('Photo library permission needed', 'Allow photo library access to select a test image.');
         return;
       }
 
@@ -72,58 +57,40 @@ export default function NewPlantRecordScreen({ navigation }) {
       });
 
       if (!result.canceled && result.assets?.length > 0) {
-        const newPhoto = result.assets[0].uri;
-
-        setPhotos((currentPhotos) => [
-          ...currentPhotos,
-          newPhoto,
-        ]);
+        setPhotos((current) => [...current, result.assets[0].uri]);
       }
-
       return;
     }
 
-    // Physical iPhone: use the real camera.
-    const permission =
-      await ImagePicker.requestCameraPermissionsAsync();
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
 
     if (!permission.granted) {
-      Alert.alert(
-        'Camera permission needed',
-        'Camera access is required to capture a plant photo.'
-      );
+      Alert.alert('Camera permission needed', 'Camera access is required to capture a plant photo.');
       return;
     }
 
-    const result = await ImagePicker.launchCameraAsync({
-      quality: 0.6,
-    });
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.6 });
 
     if (!result.canceled && result.assets?.length > 0) {
-      const newPhoto = result.assets[0].uri;
-
-      setPhotos((currentPhotos) => [
-        ...currentPhotos,
-        newPhoto,
-      ]);
+      setPhotos((current) => [...current, result.assets[0].uri]);
     }
   };
 
   const captureLocation = async () => {
-      const permission = await Location.requestForegroundPermissionsAsync();
-      if (!permission.granted) {
-        setLocationError('Location permission denied');
-        return;
-      }
-      try {
-        const pos = await Location.getCurrentPositionAsync({});
-        updateField('latitude', pos.coords.latitude.toFixed(6));
-        updateField('longitude', pos.coords.longitude.toFixed(6));
-        setLocationError('');
-      } catch (e) {
-        setLocationError('Could not get a GPS fix. Try moving to open ground.');
-      }
-    };
+    const permission = await Location.requestForegroundPermissionsAsync();
+    if (!permission.granted) {
+      setLocationError('Location permission denied');
+      return;
+    }
+    try {
+      const pos = await Location.getCurrentPositionAsync({});
+      updateField('latitude', pos.coords.latitude.toFixed(6));
+      updateField('longitude', pos.coords.longitude.toFixed(6));
+      setLocationError('');
+    } catch (e) {
+      setLocationError('Could not get a GPS fix. Try moving to open ground.');
+    }
+  };
 
   useEffect(() => {
     captureLocation();
@@ -142,164 +109,101 @@ export default function NewPlantRecordScreen({ navigation }) {
       createdAt: new Date().toISOString(),
     };
 
-    navigation.navigate('PlantRecordSummary', {
-      record,
-    });
+    navigation.navigate('PlantRecordSummary', { record });
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <ScrollView
-          contentContainerStyle={{ paddingBottom: 120 }}
-          keyboardShouldPersistTaps="handled"
-        >
-     
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.back} onPress={handleBack}>
-            <Ionicons name="arrow-back" size={16} color={colors.textSecondary} />
-            <Text style={styles.backText}>Back</Text>
-          </TouchableOpacity>
-          <View style={styles.badge}>
-            <Ionicons name="cloud-offline-outline" size={13} color={colors.warningText} />
-            <Text style={styles.badgeText}>Offline</Text>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView contentContainerStyle={{ paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
+
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.back} onPress={handleBack}>
+              <Ionicons name="arrow-back" size={16} color={colors.textSecondary} />
+              <Text style={styles.backText}>Back</Text>
+            </TouchableOpacity>
+            <View style={styles.badge}>
+              <Ionicons name="cloud-offline-outline" size={13} color={colors.warningText} />
+              <Text style={styles.badgeText}>Offline</Text>
+            </View>
           </View>
-        </View>
 
-        <Text style={styles.title}>New plant record</Text>
+          <Text style={styles.title}>New plant record</Text>
 
-        <View style={styles.photoSection}>
-          {photos.length > 0 && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.photoList}
-            >
-               {photos.map((uri, index) => (
+          <View style={styles.photoSection}>
+            {photos.length > 0 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoList}>
+                {photos.map((uri, index) => (
                   <View key={`${uri}-${index}`} style={styles.photoItem}>
-                    <Image
-                      source={{ uri }}
-                      style={styles.photoPreview}
-                    />
-
+                    <Image source={{ uri }} style={styles.photoPreview} />
                     <TouchableOpacity
                       style={styles.removePhotoButton}
-                      onPress={() => {
-                        setPhotos((currentPhotos) =>
-                          currentPhotos.filter((_, i) => i !== index)
-                        );
-                      }}
+                      onPress={() => setPhotos((current) => current.filter((_, i) => i !== index))}
                     >
-                      <Ionicons
-                        name="close"
-                        size={14}
-                        color="#FFFFFF"
-                      />
+                      <Ionicons name="close" size={14} color="#FFFFFF" />
                     </TouchableOpacity>
                   </View>
                 ))}
               </ScrollView>
             )}
 
-            <TouchableOpacity
-              style={styles.photoButton}
-              onPress={capturePhoto}
-            >
-              <Ionicons
-                name="camera-outline"
-                size={24}
-                color={colors.textSecondary}
-              />
-
+            <TouchableOpacity style={styles.photoButton} onPress={capturePhoto}>
+              <Ionicons name="camera-outline" size={24} color={colors.textSecondary} />
               <Text style={styles.photoText}>
-                {photos.length === 0
-                  ? 'Tap to capture photo'
-                  : 'Capture another photo'}
+                {photos.length === 0 ? 'Tap to capture photo' : 'Capture another photo'}
               </Text>
             </TouchableOpacity>
           </View>
 
-        <TouchableOpacity style={styles.gpsButton} onPress={captureLocation}>
-          <Ionicons name="location-outline" size={18} color={colors.successText} />
-          <Text style={styles.gpsButtonText}>Use current GPS location</Text>
-        </TouchableOpacity>
-        {locationError ? <Text style={styles.gpsError}>{locationError}</Text> : null}
+          <TouchableOpacity style={styles.gpsButton} onPress={captureLocation}>
+            <Ionicons name="location-outline" size={18} color={colors.successText} />
+            <Text style={styles.gpsButtonText}>Use current GPS location</Text>
+          </TouchableOpacity>
+          {locationError ? <Text style={styles.gpsError}>{locationError}</Text> : null}
 
-        <View style={styles.grid2}>
+          <View style={styles.grid2}>
+            <StyledInput
+              label="Latitude"
+              placeholder="e.g. 3.841200"
+              value={form.latitude}
+              onChangeText={(v) => updateField('latitude', v)}
+              keyboardType="numeric"
+              containerStyle={{ flex: 1 }}
+            />
+            <StyledInput
+              label="Longitude"
+              placeholder="e.g. 113.769100"
+              value={form.longitude}
+              onChangeText={(v) => updateField('longitude', v)}
+              keyboardType="numeric"
+              containerStyle={{ flex: 1 }}
+            />
+          </View>
+
+          <StyledInput label="Scientific name" placeholder="e.g. Shorea curtisii" value={form.scientificName} onChangeText={(v) => updateField('scientificName', v)} />
+          <StyledInput label="Common name" placeholder="e.g. Seraya" value={form.commonName} onChangeText={(v) => updateField('commonName', v)} />
+          <StyledInput label="Family" placeholder="e.g. Dipterocarpaceae" value={form.family} onChangeText={(v) => updateField('family', v)} />
+
+          <View style={styles.grid2}>
+            <StyledInput label="Height (m)" placeholder="0.0" value={form.height} onChangeText={(v) => updateField('height', v)} keyboardType="numeric" containerStyle={{ flex: 1 }} />
+            <StyledInput label="Diameter (cm)" placeholder="0.0" value={form.diameter} onChangeText={(v) => updateField('diameter', v)} keyboardType="numeric" containerStyle={{ flex: 1 }} />
+          </View>
+
           <StyledInput
-            label="Latitude"
-            placeholder="e.g. 3.841200"
-            value={form.latitude}
-            onChangeText={(v) => updateField('latitude', v)}
-            keyboardType="numeric"
-            containerStyle={{ flex: 1 }}
+            label="Morphological notes"
+            placeholder="Leaf shape, bark texture, flowering, etc."
+            value={form.notes}
+            onChangeText={(v) => updateField('notes', v)}
+            multiline
+            numberOfLines={4}
+            style={{ minHeight: 64, textAlignVertical: 'top' }}
           />
-          <StyledInput
-            label="Longitude"
-            placeholder="e.g. 113.769100"
-            value={form.longitude}
-            onChangeText={(v) => updateField('longitude', v)}
-            keyboardType="numeric"
-            containerStyle={{ flex: 1 }}
+
+          <PrimaryButton
+            title="Add Record"
+            icon={<Ionicons name="save-outline" size={16} color={colors.buttonText} />}
+            onPress={handleSave}
           />
-        </View>
-
-        <StyledInput
-          label="Scientific name"
-          placeholder="e.g. Shorea curtisii"
-          value={form.scientificName}
-          onChangeText={(v) => updateField('scientificName', v)}
-        />
-        <StyledInput
-          label="Common name"
-          placeholder="e.g. Seraya"
-          value={form.commonName}
-          onChangeText={(v) => updateField('commonName', v)}
-        />
-        <StyledInput
-          label="Family"
-          placeholder="e.g. Dipterocarpaceae"
-          value={form.family}
-          onChangeText={(v) => updateField('family', v)}
-        />
-
-        <View style={styles.grid2}>
-          <StyledInput
-            label="Height (m)"
-            placeholder="0.0"
-            value={form.height}
-            onChangeText={(v) => updateField('height', v)}
-            keyboardType="numeric"
-            containerStyle={{ flex: 1 }}
-          />
-          <StyledInput
-            label="Diameter (cm)"
-            placeholder="0.0"
-            value={form.diameter}
-            onChangeText={(v) => updateField('diameter', v)}
-            keyboardType="numeric"
-            containerStyle={{ flex: 1 }}
-          />
-        </View>
-
-        <StyledInput
-          label="Morphological notes"
-          placeholder="Leaf shape, bark texture, flowering, etc."
-          value={form.notes}
-          onChangeText={(v) => updateField('notes', v)}
-          multiline
-          numberOfLines={4}
-          style={{ minHeight: 64, textAlignVertical: 'top' }}
-        />
-
-        <PrimaryButton
-          title="Add Record"
-          icon={<Ionicons name="save-outline" size={16} color={colors.buttonText} />}
-          onPress={handleSave}
-        />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -314,7 +218,6 @@ const styles = StyleSheet.create({
   badge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.warningBg, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   badgeText: { fontSize: 11, color: colors.warningText },
   title: { fontSize: 16, fontWeight: '600', color: colors.textPrimary, marginBottom: 16 },
-  photoBox: { width: '100%', height: 120, borderWidth: 1.5, borderColor: colors.border, borderStyle: 'dashed', borderRadius: 8, alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 16, overflow: 'hidden' },
   photoText: { fontSize: 13, color: colors.textSecondary },
   photoPreview: { width: '100%', height: '100%' },
   gpsButton: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.surfaceAlt, borderWidth: 0.5, borderColor: colors.border, borderRadius: 8, padding: 12, marginBottom: 8 },

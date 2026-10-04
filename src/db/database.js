@@ -1,5 +1,5 @@
 // A single shared SQLite database file, stored on the phone. Persists
-// across app restarts, unlike the old in-memory RecordsContext.
+// across app restarts.
 import * as SQLite from 'expo-sqlite';
 
 let dbInstance = null;
@@ -24,6 +24,16 @@ export async function getDatabase() {
         createdAt TEXT
       );
     `);
+
+    // Lightweight migration: the table may already exist on phones that
+    // installed an earlier version, without this column. Adding it is
+    // safe to attempt every time - it just fails harmlessly if it's
+    // already there.
+    try {
+      await dbInstance.execAsync('ALTER TABLE plants ADD COLUMN serverId TEXT;');
+    } catch (e) {
+      // Column already exists - fine.
+    }
   }
   return dbInstance;
 }
