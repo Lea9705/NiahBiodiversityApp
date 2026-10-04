@@ -50,10 +50,10 @@ export default function RecordsScreen({ navigation }) {
           renderItem={({ item }) => (
             <RecordListItem
               title={item.scientificName || 'Unnamed record'}
-              subtitle={item.commonName || 'No common name'}
-              iconName="leaf-outline"
-              iconColor={colors.successText}
-              iconBg={colors.successBg}
+              subtitle={`${item.commonName || 'No common name'} · ${item.status === 'synced' ? 'Synced' : 'Pending sync'}`}
+              iconName={item.status === 'synced' ? 'checkmark' : 'time-outline'}
+              iconColor={item.status === 'synced' ? colors.successText : colors.warningText}
+              iconBg={item.status === 'synced' ? colors.successBg : colors.warningBg}
               showChevron
               onPress={() =>
                 navigation.navigate('PlantRecordSummary', {

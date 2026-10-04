@@ -1,7 +1,7 @@
 // Records are stored permanently in SQLite, on the phone itself. This
-// context also watches the device's real network status and
-// automatically retries any "pending" record in the background whenever
-// a connection is available - no manual button needed.
+// context also watches the device's network status and automatically
+// retries any "pending" record in the background, waiting longer
+// between tries when a record keeps failing.
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import NetInfo from '@react-native-community/netinfo';
 import { getDatabase } from '../db/database';
@@ -17,11 +17,13 @@ export function RecordsProvider({ children }) {
   const isOnlineRef = useRef(false);
   const syncingRef = useRef(false);
   const recordsRef = useRef([]);
+  const retryRef = useRef({}); // record id -> { fails, nextTry }
 
   useEffect(() => {
     recordsRef.current = records;
   }, [records]);
 
+  // Load everything already saved on this phone, once, when the app starts.
   useEffect(() => {
     (async () => {
       const db = await getDatabase();
@@ -32,9 +34,11 @@ export function RecordsProvider({ children }) {
     })();
   }, []);
 
+  // Watch the device's network status. Only "connected" is trusted; the
+  // extra "internet reachable" check can wrongly say false on some Wi-Fi.
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((state) => {
-      const online = !!state.isConnected && state.isInternetReachable !== false;
+      const online = !!state.isConnected;
       setIsOnline(online);
       isOnlineRef.current = online;
     });
@@ -79,21 +83,33 @@ export function RecordsProvider({ children }) {
     setRecords((current) => current.map((r) => (r.id === id ? { ...r, status } : r)));
   };
 
+  // Background auto-sync. Checks every 5 seconds, but a record that keeps
+  // failing waits 10s, 20s, 40s, then 60s between tries instead of being
+  // re-sent every 5 seconds forever.
   useEffect(() => {
     const intervalId = setInterval(async () => {
       if (!isOnlineRef.current || syncingRef.current) return;
 
-      const pending = recordsRef.current.filter((r) => r.status === 'pending');
-      if (pending.length === 0) return;
+      const now = Date.now();
+      const due = recordsRef.current.filter((r) => {
+        if (r.status !== 'pending') return false;
+        const retry = retryRef.current[r.id];
+        return !retry || now >= retry.nextTry;
+      });
+      if (due.length === 0) return;
 
       syncingRef.current = true;
 
-      for (const record of pending) {
+      for (const record of due) {
         try {
           await syncRecordToCloud(record);
           await updateRecordStatus(record.id, 'synced');
+          delete retryRef.current[record.id];
         } catch (e) {
-          console.log('Background sync failed for', record.id, e.message);
+          const fails = (retryRef.current[record.id]?.fails || 0) + 1;
+          const waitMs = Math.min(5000 * 2 ** fails, 60000);
+          retryRef.current[record.id] = { fails, nextTry: Date.now() + waitMs };
+          console.log('Sync failed for', record.id, '-', e.message, '- retry in', Math.round(waitMs / 1000), 's');
         }
       }
 

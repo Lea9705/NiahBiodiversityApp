@@ -4,9 +4,12 @@ import { uploadAllPhotos } from './uploadPhoto';
 const API_URL = 'http://52.62.125.146/api/plants';
 
 // Remembers the photo links already uploaded for each record (in memory
-// only), so a retry after a failed submit doesn't upload the same photos
-// to S3 again.
+// only), so a retry doesn't upload the same photos to S3 again.
 const uploadedPhotoCache = {};
+
+// Empty text fields become null instead of 0 or an empty string.
+const toNumberOrNull = (value) =>
+  value === '' || value === null || value === undefined ? null : Number(value);
 
 export async function syncRecordToCloud(record) {
   let photoUrls = uploadedPhotoCache[record.id];
@@ -19,20 +22,26 @@ export async function syncRecordToCloud(record) {
     uploadedPhotoCache[record.id] = photoUrls;
   }
 
+  // These names match what the backend route reads. Note that
+  // diameter_cm really is snake_case on the server.
+  const body = {
+    scientificName: record.scientificName,
+    commonName: record.commonName,
+    family: record.family,
+    latitude: toNumberOrNull(record.latitude),
+    longitude: toNumberOrNull(record.longitude),
+    height: toNumberOrNull(record.height),
+    diameter_cm: toNumberOrNull(record.diameter),
+    notes: record.notes,
+    // The table has a single image column, so only the first photo's
+    // link is sent for now.
+    imageUrl: photoUrls[0] || null,
+  };
+
   const response = await fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      scientific_name: record.scientificName,
-      common_name: record.commonName,
-      family: record.family,
-      latitude: Number(record.latitude),
-      longitude: Number(record.longitude),
-      height_m: Number(record.height),
-      diameter_cm: Number(record.diameter),
-      morphological_notes: record.notes,
-      photos: photoUrls,
-    }),
+    body: JSON.stringify(body),
   });
 
   const text = await response.text();
