@@ -9,8 +9,11 @@ import { useRecords } from '../context/RecordsContext';
 export default function PlantRecordSummaryScreen({ navigation, route }) {
   const { record, readOnly } = route.params;
   const { addRecord } = useRecords();
+  const [submitting, setSubmitting] = useState(false);
 
   const handleSend = () => {
+    if (submitting) return;
+
     Alert.alert(
       'Submit plant record?',
       'Please confirm that you want to submit this plant record.',
@@ -19,15 +22,19 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
         {
           text: 'Submit',
           onPress: async () => {
+            setSubmitting(true);
             try {
-              await addRecord({
+              const status = await addRecord({
                 ...record,
                 status: 'pending',
               });
+              setSubmitting(false);
 
               Alert.alert(
-                'Record submitted',
-                'Your plant record has been successfully sent and synced.',
+                status === 'synced' ? 'Record submitted' : 'Record saved',
+                status === 'synced'
+                  ? 'Your plant record has been saved and synced to the cloud.'
+                  : 'Your plant record is saved on this phone. It will sync automatically when you are online.',
                 [
                   {
                     text: 'OK',
@@ -36,6 +43,7 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
                 ]
               );
             } catch (error) {
+              setSubmitting(false);
               console.error('Save plant error:', error);
 
               Alert.alert(
@@ -106,14 +114,26 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
 
         {!readOnly && (
           <View style={styles.actions}>
-            <TouchableOpacity style={styles.editButton} onPress={() => navigation.goBack()}>
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() => navigation.goBack()}
+              disabled={submitting}
+            >
               <Ionicons name="create-outline" size={18} color={colors.textPrimary} />
               <Text style={styles.editButtonText}>Edit</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
-              <Ionicons name="send-outline" size={18} color={colors.buttonText} />
-              <Text style={styles.sendButtonText}>Send</Text>
+            <TouchableOpacity
+              style={styles.sendButton}
+              onPress={handleSend}
+              disabled={submitting}
+            >
+              <Ionicons
+                name={submitting ? 'sync-outline' : 'send-outline'}
+                size={18}
+                color={colors.buttonText}
+              />
+              <Text style={styles.sendButtonText}>{submitting ? 'Saving...' : 'Send'}</Text>
             </TouchableOpacity>
           </View>
         )}

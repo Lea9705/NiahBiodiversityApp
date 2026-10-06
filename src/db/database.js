@@ -25,10 +25,8 @@ export async function getDatabase() {
       );
     `);
 
-    // Lightweight migration: the table may already exist on phones that
-    // installed an earlier version, without this column. Adding it is
-    // safe to attempt every time - it just fails harmlessly if it's
-    // already there.
+    // Older installs may not have this column. Adding it is safe to try
+    // every time; it fails harmlessly if it already exists.
     try {
       await dbInstance.execAsync('ALTER TABLE plants ADD COLUMN serverId TEXT;');
     } catch (e) {

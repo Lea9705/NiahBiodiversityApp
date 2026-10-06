@@ -1,9 +1,6 @@
 // Uploads photos to S3 using a presigned PUT link that is signed on the
 // phone (AWS Signature V4, no AWS SDK needed). The upload itself is a
 // plain fetch PUT.
-//
-// When the backend's presign route exists, replace createPresignedUpload()
-// with a call to it. Nothing else in this file needs to change.
 import HmacSHA256 from 'crypto-js/hmac-sha256';
 import SHA256 from 'crypto-js/sha256';
 import Hex from 'crypto-js/enc-hex';

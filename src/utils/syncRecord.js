@@ -22,8 +22,6 @@ export async function syncRecordToCloud(record) {
     uploadedPhotoCache[record.id] = photoUrls;
   }
 
-  // These names match what the backend route reads. Note that
-  // diameter_cm really is snake_case on the server.
   const body = {
     scientificName: record.scientificName,
     commonName: record.commonName,
@@ -33,9 +31,9 @@ export async function syncRecordToCloud(record) {
     height: toNumberOrNull(record.height),
     diameter_cm: toNumberOrNull(record.diameter),
     notes: record.notes,
-    // The table has a single image column, so only the first photo's
-    // link is sent for now.
     imageUrl: photoUrls[0] || null,
+    // The backend reads this one. It saves every photo link.
+    imageUrls: photoUrls,
   };
 
   const response = await fetch(API_URL, {
