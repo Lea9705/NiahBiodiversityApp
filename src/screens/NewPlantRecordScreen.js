@@ -10,13 +10,22 @@ import * as Location from 'expo-location';
 import { colors } from '../theme/colors';
 import StyledInput from '../components/StyledInput';
 import PrimaryButton from '../components/PrimaryButton';
+import { useRecords } from '../context/RecordsContext';
 
 export default function NewPlantRecordScreen({ navigation }) {
+  const { isOnline, records } = useRecords();
+
+  const pendingCount = records.filter(
+    (r) => r.status === 'pending'
+  ).length;
+
   const [recordId] = useState(
     () => `plant_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
   );
+
   const [photos, setPhotos] = useState([]);
   const [locationError, setLocationError] = useState('');
+  const [locationLoading, setLocationLoading] = useState(false);
   const [form, setForm] = useState({
     scientificName: '',
     commonName: '',
@@ -77,18 +86,25 @@ export default function NewPlantRecordScreen({ navigation }) {
   };
 
   const captureLocation = async () => {
+    setLocationLoading(true);
+
     const permission = await Location.requestForegroundPermissionsAsync();
+
     if (!permission.granted) {
       setLocationError('Location permission denied');
+      setLocationLoading(false);
       return;
     }
     try {
       const pos = await Location.getCurrentPositionAsync({});
+
       updateField('latitude', pos.coords.latitude.toFixed(6));
       updateField('longitude', pos.coords.longitude.toFixed(6));
       setLocationError('');
     } catch (e) {
       setLocationError('Could not get a GPS fix. Try moving to open ground.');
+    } finally {
+      setLocationLoading(false);
     }
   };
 
@@ -97,7 +113,7 @@ export default function NewPlantRecordScreen({ navigation }) {
   }, []);
 
   const handleSave = () => {
-    if (!form.scientificName) {
+    if (!form.scientificName.trim()) {
       Alert.alert('Missing info', 'Scientific name is required.');
       return;
     }
@@ -122,10 +138,35 @@ export default function NewPlantRecordScreen({ navigation }) {
               <Ionicons name="arrow-back" size={16} color={colors.textSecondary} />
               <Text style={styles.backText}>Back</Text>
             </TouchableOpacity>
-            <View style={styles.badge}>
-              <Ionicons name="cloud-offline-outline" size={13} color={colors.warningText} />
-              <Text style={styles.badgeText}>Offline</Text>
+
+            <View
+              style={[
+                styles.badge,
+                isOnline ? styles.badgeOnline : styles.badgeOffline,
+              ]}
+            >
+              <Ionicons
+                name={isOnline ? 'cloud-outline' : 'cloud-offline-outline'}
+                size={13}
+                color={isOnline ? colors.successText : colors.warningText}
+              />
+
+              <Text
+                style={[
+                styles.badgeText,
+                isOnline ? styles.badgeTextOnline : styles.badgeTextOffline,
+                ]}
+              >
+                {isOnline
+                  ? pendingCount > 0
+                    ? `Online, ${pendingCount} pending`
+                    : 'Online'
+                  : pendingCount > 0
+                    ? `Offline, ${pendingCount} pending`
+                    : 'Offline'}
+              </Text>
             </View>
+
           </View>
 
           <Text style={styles.title}>New plant record</Text>
@@ -155,10 +196,24 @@ export default function NewPlantRecordScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.gpsButton} onPress={captureLocation}>
-            <Ionicons name="location-outline" size={18} color={colors.successText} />
-            <Text style={styles.gpsButtonText}>Use current GPS location</Text>
+          <TouchableOpacity
+            style={styles.gpsButton}
+            onPress={captureLocation}
+            disabled={locationLoading}
+          >
+            <Ionicons
+              name={locationLoading ? 'sync-outline' : 'location-outline'}
+              size={18}
+              color={colors.successText}
+            />
+
+            <Text style={styles.gpsButtonText}>
+              {locationLoading
+                ? 'Getting GPS location...'
+                : 'Use current GPS location'}
+            </Text>
           </TouchableOpacity>
+
           {locationError ? <Text style={styles.gpsError}>{locationError}</Text> : null}
 
           <View style={styles.grid2}>
@@ -215,8 +270,12 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   back: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   backText: { color: colors.textSecondary, fontSize: 13 },
-  badge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.warningBg, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  badgeText: { fontSize: 11, color: colors.warningText },
+  badge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, },
+  badgeOnline: { backgroundColor: colors.successBg, },
+  badgeOffline: { backgroundColor: colors.warningBg, },
+  badgeText: { fontSize: 11, },
+  badgeTextOnline: { color: colors.successText, },
+  badgeTextOffline: { color: colors.warningText, },
   title: { fontSize: 16, fontWeight: '600', color: colors.textPrimary, marginBottom: 16 },
   photoText: { fontSize: 13, color: colors.textSecondary },
   photoPreview: { width: '100%', height: '100%' },

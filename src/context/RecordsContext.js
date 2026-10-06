@@ -24,15 +24,17 @@ export function RecordsProvider({ children }) {
   }, [records]);
 
   // Load everything already saved on this phone, once, when the app starts.
-  useEffect(() => {
-    (async () => {
-      const db = await getDatabase();
-      const rows = await db.getAllAsync('SELECT * FROM plants ORDER BY createdAt DESC');
-      const parsed = rows.map((r) => ({ ...r, photos: JSON.parse(r.photos || '[]') }));
-      setRecords(parsed);
-      setLoading(false);
-    })();
-  }, []);
+  // Load everything already saved on this phone, once, when the app starts.
+useEffect(() => {
+  (async () => {
+    const db = await getDatabase();
+
+    const rows = await db.getAllAsync('SELECT * FROM plants ORDER BY createdAt DESC');
+    const parsed = rows.map((r) => ({ ...r, photos: JSON.parse(r.photos || '[]') }));
+    setRecords(parsed);
+    setLoading(false);
+  })();
+}, []);
 
   // Watch the device's network status. Only "connected" is trusted; the
   // extra "internet reachable" check can wrongly say false on some Wi-Fi.
@@ -46,34 +48,78 @@ export function RecordsProvider({ children }) {
   }, []);
 
   const addRecord = async (record) => {
-    const db = await getDatabase();
-    const toSave = {
-      id: record.id,
-      scientificName: record.scientificName || '',
-      commonName: record.commonName || '',
-      family: record.family || '',
-      height: record.height || '',
-      diameter: record.diameter || '',
-      latitude: record.latitude || '',
-      longitude: record.longitude || '',
-      notes: record.notes || '',
-      photos: JSON.stringify(record.photos || []),
-      status: record.status || 'pending',
-      createdAt: record.createdAt || new Date().toISOString(),
-    };
+  const db = await getDatabase();
 
+  const toSave = {
+    id: record.id,
+    scientificName: record.scientificName || '',
+    commonName: record.commonName || '',
+    family: record.family || '',
+    height: record.height || '',
+    diameter: record.diameter || '',
+    latitude: record.latitude || '',
+    longitude: record.longitude || '',
+    notes: record.notes || '',
+    photos: JSON.stringify(record.photos || []),
+    status: 'pending',
+    createdAt: record.createdAt || new Date().toISOString(),
+  };
+
+  // If online, reserve the sync lock before saving so the
+  // background sync cannot upload this same record at the same time.
+  if (isOnlineRef.current) {
+    syncingRef.current = true;
+  }
+
+  try {
     await db.runAsync(
       `INSERT INTO plants (id, scientificName, commonName, family, height, diameter, latitude, longitude, notes, photos, status, createdAt)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        toSave.id, toSave.scientificName, toSave.commonName, toSave.family,
-        toSave.height, toSave.diameter, toSave.latitude, toSave.longitude,
-        toSave.notes, toSave.photos, toSave.status, toSave.createdAt,
+        toSave.id,
+        toSave.scientificName,
+        toSave.commonName,
+        toSave.family,
+        toSave.height,
+        toSave.diameter,
+        toSave.latitude,
+        toSave.longitude,
+        toSave.notes,
+        toSave.photos,
+        toSave.status,
+        toSave.createdAt,
       ]
     );
 
-    setRecords((current) => [{ ...record, photos: record.photos || [] }, ...current]);
-  };
+    const localRecord = {
+      ...toSave,
+      photos: record.photos || [],
+    };
+
+    setRecords((current) => [
+      localRecord,
+      ...current,
+    ]);
+
+    // If already online, sync immediately.
+    if (isOnlineRef.current) {
+      try {
+        await syncRecordToCloud(localRecord);
+        await updateRecordStatus(record.id, 'synced');
+        delete retryRef.current[record.id];
+      } catch (e) {
+        console.log(
+          'Online sync failed for',
+          record.id,
+          '- keeping record pending:',
+          e.message
+        );
+      }
+    }
+  } finally {
+    syncingRef.current = false;
+  }
+};
 
   const findRecordById = (id) => records.find((r) => r.id === id);
 
@@ -82,6 +128,21 @@ export function RecordsProvider({ children }) {
     await db.runAsync('UPDATE plants SET status = ? WHERE id = ?', [status, id]);
     setRecords((current) => current.map((r) => (r.id === id ? { ...r, status } : r)));
   };
+
+  //temporarily
+  const deleteRecord = async (id) => {
+  const db = await getDatabase();
+
+  await db.runAsync(
+    'DELETE FROM plants WHERE id = ?',
+    [id]
+  );
+
+  setRecords((current) =>
+    current.filter((r) => r.id !== id)
+  );
+};
+
 
   // Background auto-sync. Checks every 5 seconds, but a record that keeps
   // failing waits 10s, 20s, 40s, then 60s between tries instead of being
@@ -121,7 +182,15 @@ export function RecordsProvider({ children }) {
 
   return (
     <RecordsContext.Provider
-      value={{ records, addRecord, findRecordById, updateRecordStatus, isOnline, loading }}
+      value={{
+        records,
+        addRecord,
+        findRecordById,
+        updateRecordStatus,
+        deleteRecord,
+        isOnline,
+        loading
+      }}
     >
       {children}
     </RecordsContext.Provider>

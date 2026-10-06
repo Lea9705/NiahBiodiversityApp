@@ -12,33 +12,60 @@ import PrimaryButton from '../components/PrimaryButton';
 import OutlineButton from '../components/OutlineButton';
 import RecordListItem from '../components/RecordListItem';
 import BottomNav from '../components/BottomNav';
+import { useRecords } from '../context/RecordsContext';
 
-// TODO: replace with records read from local offline storage (SQLite/WatermelonDB)
-const DUMMY_RECORDS = [
-  { key: '1', name: 'Shorea curtisii', status: 'synced', detail: 'Synced · 2h ago' },
-  { key: '2', name: 'Nepenthes ampullaria', status: 'pending', detail: 'Pending sync · GPS logged' },
-  { key: '3', name: 'Dipterocarpus caudatus', status: 'pending', detail: 'Pending sync · photo attached' },
-];
 
 export default function BotanistHomeScreen({ navigation }) {
   const [search, setSearch] = useState('');
-  const pendingCount = DUMMY_RECORDS.filter((r) => r.status === 'pending').length;
-  const filtered = DUMMY_RECORDS.filter((r) => r.name.toLowerCase().includes(search.toLowerCase()));
+  const { records, isOnline } = useRecords();
+  const pendingCount = records.filter(
+    (r) => r.status === 'pending'
+  ).length;
+  const filtered = records.filter((r) =>
+    (r.scientificName || '')
+      .toLowerCase()
+      .includes(search.toLowerCase())
+  );
 
   return (
     <SafeAreaView style={styles.container}>
 
       <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Ground truthing</Text>
-          <Text style={styles.subtitle}>Niah national park</Text>
-        </View>
-        <View style={styles.badge}>
-          <Ionicons name="cloud-offline-outline" size={13} color={colors.warningText} />
-          <Text style={styles.badgeText}>Offline, {pendingCount} pending</Text>
-        </View>
-      </View>
 
+        <View>
+          <Text style={styles.title}>Ground Truthing</Text>
+          <Text style={styles.subtitle}>Niah National Park</Text>
+        </View>
+
+        <View
+          style={[
+            styles.badge,
+            isOnline ? styles.badgeOnline : styles.badgeOffline,
+          ]}
+        >
+          <Ionicons
+            name={isOnline ? 'cloud-outline' : 'cloud-offline-outline'}
+            size={13}
+            color={isOnline ? colors.successText : colors.warningText}
+          />
+
+          <Text
+            style={[
+            styles.badgeText,
+            isOnline ? styles.badgeTextOnline : styles.badgeTextOffline,
+            ]}
+          >
+            {isOnline
+              ? pendingCount > 0
+                ? `Online, ${pendingCount} pending`
+                : 'Online'
+              : pendingCount > 0
+                ? `Offline, ${pendingCount} pending`
+                : 'Offline'}
+          </Text>
+        </View>
+
+    </View>
       <View style={styles.grid2}>
         <PrimaryButton
           title="Scan QR tag"
@@ -78,14 +105,26 @@ export default function BotanistHomeScreen({ navigation }) {
 
       <FlatList
         data={filtered}
-        keyExtractor={(item) => item.key}
+        keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <RecordListItem
-            title={item.name}
-            subtitle={item.detail}
+            title={item.scientificName || 'Unnamed plant'}
+            subtitle={
+              item.status === 'synced'
+                ? 'Synced'
+                : 'Pending sync'
+            }
             iconName={item.status === 'synced' ? 'checkmark' : 'time-outline'}
-            iconColor={item.status === 'synced' ? colors.successText : colors.warningText}
-            iconBg={item.status === 'synced' ? colors.successBg : colors.warningBg}
+            iconColor={
+              item.status === 'synced'
+                ? colors.successText
+                : colors.warningText
+            }
+            iconBg={
+              item.status === 'synced'
+                ? colors.successBg
+                : colors.warningBg
+            }
           />
         )}
       />
@@ -124,4 +163,8 @@ const styles = StyleSheet.create({
   activitiesCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.surface, padding: 14, borderRadius: 12, marginBottom: 16, },
   activitiesTitle: { fontSize: 14, fontWeight: '600', color: colors.textPrimary, },
   activitiesSubtitle: { fontSize: 12, color: colors.textSecondary, marginTop: 4, },
+  badgeOnline: { backgroundColor: colors.successBg, },
+  badgeOffline: { backgroundColor: colors.warningBg, },
+  badgeTextOnline: { color: colors.successText, },
+  badgeTextOffline: { color: colors.warningText, },
 });

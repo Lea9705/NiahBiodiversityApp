@@ -5,12 +5,10 @@ import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
 import { colors } from '../theme/colors';
 import { useRecords } from '../context/RecordsContext';
-import { syncRecordToCloud } from '../utils/syncRecord';
 
 export default function PlantRecordSummaryScreen({ navigation, route }) {
   const { record, readOnly } = route.params;
-  const { addRecord, updateRecordStatus } = useRecords();
-  const [uploading, setUploading] = useState(false);
+  const { addRecord } = useRecords();
 
   const handleSend = () => {
     Alert.alert(
@@ -21,28 +19,28 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
         {
           text: 'Submit',
           onPress: async () => {
-            await addRecord(record);
-
             try {
-              setUploading(true);
-              const data = await syncRecordToCloud(record);
-              setUploading(false);
-
-              await updateRecordStatus(record.id, 'synced');
+              await addRecord({
+                ...record,
+                status: 'pending',
+              });
 
               Alert.alert(
                 'Record submitted',
-                `Plant record #${data.id} has been submitted successfully.`,
-                [{ text: 'OK', onPress: () => navigation.navigate('BotanistHome') }]
+                'Your plant record has been successfully sent and synced.',
+                [
+                  {
+                    text: 'OK',
+                    onPress: () => navigation.navigate('BotanistHome'),
+                  },
+                ]
               );
             } catch (error) {
-              console.error('Submit plant error:', error);
-              setUploading(false);
+              console.error('Save plant error:', error);
 
               Alert.alert(
-                'Saved on this phone',
-                "Couldn't reach the server right now, but your record is safely saved. It will sync automatically once you're back online.",
-                [{ text: 'OK', onPress: () => navigation.navigate('BotanistHome') }]
+                'Could not save',
+                'The plant record could not be saved on this device.'
               );
             }
           },
@@ -113,9 +111,9 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
               <Text style={styles.editButtonText}>Edit</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.sendButton} onPress={handleSend} disabled={uploading}>
-              <Ionicons name={uploading ? 'cloud-upload-outline' : 'send-outline'} size={18} color={colors.buttonText} />
-              <Text style={styles.sendButtonText}>{uploading ? 'Uploading…' : 'Send'}</Text>
+            <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
+              <Ionicons name="send-outline" size={18} color={colors.buttonText} />
+              <Text style={styles.sendButtonText}>Send</Text>
             </TouchableOpacity>
           </View>
         )}
