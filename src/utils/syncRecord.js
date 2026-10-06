@@ -36,6 +36,7 @@ export async function syncRecordToCloud(record) {
     // The table has a single image column, so only the first photo's
     // link is sent for now.
     imageUrl: photoUrls[0] || null,
+    //images: photoUrls,
   };
 
   const response = await fetch(API_URL, {
