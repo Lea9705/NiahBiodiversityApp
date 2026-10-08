@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,44 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
 export default function PlantDetailScreen({ navigation, route }) {
-  const plant = route.params?.plant;
+  const { plantId } = route.params || {};
+  const [plant, setPlant] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPlant = async () => {
+      try {
+        const response = await fetch('http://52.62.125.146/api/plants');
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch plant: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        const foundPlant = data.find(
+          (item) => String(item.id) === String(plantId)
+        );
+
+        setPlant(foundPlant || null);
+      } catch (error) {
+        console.error('Failed to load plant:', error);
+        setPlant(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPlant();
+  }, [plantId]);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text style={styles.errorText}>Loading plant information...</Text>
+      </SafeAreaView>
+    );
+  }
 
   if (!plant) {
     return (
@@ -58,10 +95,10 @@ export default function PlantDetailScreen({ navigation, route }) {
           />
         </View>
 
-        <Text style={styles.name}>{plant.name}</Text>
+        <Text style={styles.name}>{plant.scientific_name}</Text>
 
         <Text style={styles.detail}>
-          {plant.detail}
+          {plant.plant_status || 'Pending'}
         </Text>
 
         <View style={styles.divider} />
@@ -70,16 +107,47 @@ export default function PlantDetailScreen({ navigation, route }) {
 
         <View style={styles.infoCard}>
           <Text style={styles.label}>Scientific name</Text>
-          <Text style={styles.value}>{plant.name}</Text>
-
-          <Text style={styles.label}>Conservation status</Text>
           <Text style={styles.value}>
-            {plant.detail?.split(' · ')[0] || 'Not available'}
+            {plant.scientific_name || 'Not available'}
+          </Text>
+
+          <Text style={styles.label}>Common name</Text>
+          <Text style={styles.value}>
+            {plant.common_name || 'Not available'}
+          </Text>
+
+          <Text style={styles.label}>Family</Text>
+          <Text style={styles.value}>
+            {plant.family || 'Not available'}
+          </Text>
+
+          <Text style={styles.label}>Height</Text>
+          <Text style={styles.value}>
+            {plant.height_m != null ? `${plant.height_m} m` : 'Not available'}
+          </Text>
+
+          <Text style={styles.label}>Diameter</Text>
+          <Text style={styles.value}>
+            {plant.diameter_cm != null
+              ? `${plant.diameter_cm} cm`
+              : 'Not available'}
+          </Text>
+
+          <Text style={styles.label}>Morphological notes</Text>
+          <Text style={styles.value}>
+            {plant.morphological_notes || 'Not available'}
           </Text>
 
           <Text style={styles.label}>Location</Text>
           <Text style={styles.value}>
-            {plant.detail?.split(' · ')[1] || 'Not available'}
+            {plant.latitude && plant.longitude
+              ? `${plant.latitude}, ${plant.longitude}`
+              : 'Not available'}
+          </Text>
+
+          <Text style={styles.label}>Status</Text>
+          <Text style={styles.value}>
+            {plant.plant_status || 'Pending'}
           </Text>
         </View>
 
@@ -90,12 +158,10 @@ export default function PlantDetailScreen({ navigation, route }) {
             color={colors.accentText}
           />
 
-          <Text style={styles.noteText}>
-            This plant information is currently prototype data.
-            It will later be retrieved from the central biodiversity
-            knowledge system.
-          </Text>
-        </View>
+        <Text style={styles.noteText}>
+          This information is retrieved from the biodiversity database.
+        </Text>
+      </View>
       </ScrollView>
     </SafeAreaView>
   );

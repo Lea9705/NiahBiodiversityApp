@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,51 +8,76 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { colors } from '../theme/colors';
 
-// Dummy data for UI testing.
-// This will later come from the backend API.
-const DUMMY_ACTIVITIES = [
-  {
-    id: '1',
-    name: 'Shorea curtisii',
-    status: 'pending',
-    date: '1 Oct 2026',
-    detail: 'Submitted · Waiting for approval',
-  },
-  {
-    id: '2',
-    name: 'Nepenthes ampullaria',
-    status: 'approved',
-    date: '29 Sep 2026',
-    detail: 'Approved · 30 Sep 2026',
-  },
-  {
-    id: '3',
-    name: 'Ficus sp.',
-    status: 'rejected',
-    date: '27 Sep 2026',
-    detail: 'Rejected · Review required',
-  },
-];
-
 export default function ActivitiesScreen({ navigation }) {
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState('All');
+  const [activities, setActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchActivities = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      const response = await fetch('http://52.62.125.146/api/plants');
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch plants: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      const formattedActivities = data.map((plant) => {
+        const status = plant.plant_status || 'Pending';
+
+        let detail = 'Submitted · Waiting for approval';
+
+        if (status === 'Approved') {
+          detail = 'Approved';
+        } else if (status === 'Rejected') {
+          detail = 'Rejected';
+        }
+
+        return {
+          id: String(plant.id),
+          name: plant.scientific_name || 'Unknown plant',
+          status,
+          date: plant.created_at
+            ? new Date(plant.created_at).toLocaleDateString()
+            : '',
+          detail,
+        };
+      });
+
+      setActivities(formattedActivities);
+    } catch (error) {
+      console.error('Failed to load activities:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchActivities();
+    }, [fetchActivities])
+  );
 
   const filteredActivities =
-    filter === 'all'
-      ? DUMMY_ACTIVITIES
-      : DUMMY_ACTIVITIES.filter((item) => item.status === filter);
+    filter === 'All'
+      ? activities
+      : activities.filter((item) => item.status === filter);
 
   const getStatusIcon = (status) => {
-    if (status === 'approved') return 'checkmark-circle';
-    if (status === 'rejected') return 'close-circle';
+    if (status === 'Approved') return 'checkmark-circle';
+    if (status === 'Rejected') return 'close-circle';
     return 'time-outline';
   };
 
   const getStatusColor = (status) => {
-    if (status === 'approved') return colors.successText;
-    if (status === 'rejected') return colors.errorText;
+    if (status === 'Approved') return colors.successText;
+    if (status === 'Rejected') return colors.errorText;
     return colors.warningText;
   };
 
@@ -77,7 +102,7 @@ export default function ActivitiesScreen({ navigation }) {
 
       {/* Filter tabs */}
       <View style={styles.filters}>
-        {['all', 'pending', 'approved', 'rejected'].map((item) => (
+        {['All', 'Pending', 'Approved', 'Rejected'].map((item) => (
           <TouchableOpacity
             key={item}
             style={[
@@ -120,7 +145,9 @@ export default function ActivitiesScreen({ navigation }) {
           <TouchableOpacity
             style={styles.activityCard}
             onPress={() => {
-              console.log('Selected activity:', item);
+              navigation.navigate('PlantDetail', {
+                plantId: item.id,
+              });
             }}
           >
             <View style={styles.iconContainer}>
