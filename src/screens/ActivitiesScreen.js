@@ -1,11 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -145,6 +139,8 @@ export default function ActivitiesScreen({ navigation }) {
           <TouchableOpacity
             style={styles.activityCard}
             onPress={() => {
+              console.log('OPENING PLANT:', item.id);
+
               navigation.navigate('PlantDetail', {
                 plantId: item.id,
               });

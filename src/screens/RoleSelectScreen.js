@@ -1,19 +1,23 @@
 // First screen the app shows. Purely a router - it doesn't log anyone in,
 // it just sends the user to the right login screen.
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, TouchableOpacity, StyleSheet, ImageBackground } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
 export default function RoleSelectScreen({ navigation }) {
   return (
-    <SafeAreaView style={styles.container}>
+    <ImageBackground
+      source={require('../../assets/images/niah-background.jpg')}
+      style={styles.container}
+      resizeMode="cover"
+    >
+      <View style={styles.overlay}>
       <View style={styles.logoWrap}>
         <View style={styles.logo}>
-          <Ionicons name="leaf-outline" size={26} color={colors.successText} />
+          <Ionicons name="leaf-outline" size={42} color={colors.successText} />
         </View>
-        <Text style={styles.title}>Niah biodiversity</Text>
+        <Text style={styles.title}>Niah Biodiversity</Text>
         <Text style={styles.subtitle}>Who's using the app today?</Text>
       </View>
 
@@ -22,8 +26,8 @@ export default function RoleSelectScreen({ navigation }) {
           <Ionicons name="clipboard-outline" size={20} color={colors.accentText} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.cardTitle}>I'm a botanist</Text>
-          <Text style={styles.cardSub}>Field data collection and records</Text>
+          <Text style={styles.cardTitle}>I'm A Botanist</Text>
+          <Text style={styles.cardSub}>Field Data Collection and Records</Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
       </TouchableOpacity>
@@ -33,23 +37,25 @@ export default function RoleSelectScreen({ navigation }) {
           <Ionicons name="location-outline" size={20} color={colors.successText} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.cardTitle}>I'm a visitor</Text>
-          <Text style={styles.cardSub}>Explore plants on the trail</Text>
+          <Text style={styles.cardTitle}>I'm A Visitor</Text>
+          <Text style={styles.cardSub}>Explore Plants on The Trail</Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
       </TouchableOpacity>
-    </SafeAreaView>
+     </View> 
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg, padding: 20, justifyContent: 'center' },
-  logoWrap: { alignItems: 'center', marginBottom: 32 },
-  logo: { width: 52, height: 52, borderRadius: 14, backgroundColor: colors.successBg, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  title: { fontSize: 17, fontWeight: '600', color: colors.textPrimary },
-  subtitle: { fontSize: 13, color: colors.textSecondary, marginTop: 4, textAlign: 'center' },
+  container: {flex: 1,justifyContent: 'center', },
+  overlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', padding: 20, justifyContent: 'center', },
+  logoWrap: { alignItems: 'center', marginBottom: 36 },
+  logo: { width: 80, height: 80, borderRadius: 20, backgroundColor: colors.successBg, alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
+  title: { fontSize: 35, fontWeight: '700', color: colors.textPrimary, textAlign: 'center', },
+  subtitle: { fontSize: 16, fontWeight: '500', color: '#FFFFFF', marginTop: 6, textAlign: 'center', textShadowColor: 'rgba(0, 0, 0, 0.8)', textShadowOffset: { width: 0, height: 1 },  textShadowRadius: 4, },
   card: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.surfaceAlt, borderWidth: 0.5, borderColor: colors.border, borderRadius: 12, padding: 16, marginBottom: 12 },
   iconCircle: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  cardTitle: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
-  cardSub: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+  cardTitle: { fontSize: 16, fontWeight: '600', color: colors.textPrimary },
+  cardSub: { fontSize: 14, color: colors.textSecondary, marginTop: 2 },
 });

@@ -13,7 +13,7 @@ export default function BotanistProfileScreen({ navigation }) {
       >
         <Ionicons
           name="arrow-back"
-          size={22}
+          size={16}
           color={colors.textPrimary}
         />
         <Text style={styles.backText}>Back</Text>
@@ -28,18 +28,27 @@ export default function BotanistProfileScreen({ navigation }) {
           />
         </View>
 
-        <Text style={styles.title}>Botanist profile</Text>
+        <Text style={styles.title}>Botanist Profile</Text>
         <Text style={styles.subtitle}>
-          Field staff and conservation team
+          Your Account Information
         </Text>
       </View>
 
       <View style={styles.infoCard}>
-        <Text style={styles.label}>Account</Text>
+        <Text style={styles.label}>Name</Text>
+        <Text style={styles.value}>Not set up yet</Text>
+
+        <Text style={styles.label}>Email</Text>
+        <Text style={styles.value}>Not set up yet</Text>
+
+        <Text style={styles.label}>Role</Text>
         <Text style={styles.value}>Botanist</Text>
 
-        <Text style={styles.label}>Access</Text>
-        <Text style={styles.value}>Field data collection</Text>
+        <Text style={styles.label}>Section</Text>
+        <Text style={styles.value}>Not assigned</Text>
+
+        <Text style={styles.label}>Division</Text>
+        <Text style={styles.value}>Not assigned</Text>
       </View>
 
       <Pressable
@@ -51,7 +60,7 @@ export default function BotanistProfileScreen({ navigation }) {
           size={20}
           color={colors.errorText}
         />
-        <Text style={styles.logoutText}>Log out</Text>
+        <Text style={styles.logoutText}>Log Out</Text>
       </Pressable>
     </SafeAreaView>
   );
@@ -64,16 +73,18 @@ const styles = StyleSheet.create({
     padding: 16,
   },
 
+
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    paddingVertical: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 0,
     marginBottom: 24,
   },
 
   backText: {
-    fontSize: 16,
+    fontSize: 14,
     color: colors.textPrimary,
     marginLeft: 6,
   },
@@ -121,7 +132,7 @@ const styles = StyleSheet.create({
   value: {
     fontSize: 15,
     color: colors.textPrimary,
-    marginBottom: 14,
+    marginBottom: 18,
   },
 
   logoutButton: {
