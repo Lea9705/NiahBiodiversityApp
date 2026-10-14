@@ -2,7 +2,7 @@
 // recent records. The record list is dummy data for now - same pattern
 // as your contact_list.js lab, just swap DUMMY_RECORDS for real local
 // storage + synced API data once that's ready.
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,11 +13,50 @@ import OutlineButton from '../components/OutlineButton';
 import RecordListItem from '../components/RecordListItem';
 import BottomNav from '../components/BottomNav';
 import { useRecords } from '../context/RecordsContext';
+import { useFocusEffect } from '@react-navigation/native';
 
 
 export default function BotanistHomeScreen({ navigation }) {
   const [search, setSearch] = useState('');
+  const [pendingApprovalCount, setPendingApprovalCount] = useState(0);
   const { records, isOnline } = useRecords();
+    useFocusEffect(
+      useCallback(() => {
+        let active = true;
+
+        const fetchPendingApprovals = async () => {
+          try {
+            const response = await fetch('http://52.62.125.146/api/plants');
+
+            if (!response.ok) {
+              throw new Error('Failed to fetch plant records');
+            }
+
+            const data = await response.json();
+
+            const count = data.filter(
+              (plant) =>
+                String(plant.plant_status || 'Pending')
+                  .trim()
+                  .toLowerCase() === 'pending'
+            ).length;
+
+            if (active) {
+              setPendingApprovalCount(count);
+            }
+          } catch (error) {
+            console.error('Failed to fetch pending approvals:', error);
+          }
+        };
+
+        fetchPendingApprovals();
+
+        return () => {
+          active = false;
+        };
+      }, [])
+    );
+
   const pendingCount = records.filter(
     (r) => r.status === 'pending'
   ).length;
@@ -90,7 +129,7 @@ export default function BotanistHomeScreen({ navigation }) {
         <View>
           <Text style={styles.activitiesTitle}>My Activities</Text>
           <Text style={styles.activitiesSubtitle}>
-            {pendingCount} pending submission{pendingCount !== 1 ? 's' : ''}
+            {pendingApprovalCount} pending submission{pendingApprovalCount !== 1 ? 's' : ''}
           </Text>
         </View>
 

@@ -32,6 +32,15 @@ export async function getDatabase() {
     } catch (e) {
       // Column already exists - fine.
     }
+
+    try {
+      await dbInstance.execAsync(
+        'ALTER TABLE plants ADD COLUMN approvalStatus TEXT;'
+      );
+    } catch (e) {
+      // Column already exists - fine.
+    }
+
   }
   return dbInstance;
 }

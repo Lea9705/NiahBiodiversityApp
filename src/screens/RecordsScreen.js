@@ -9,7 +9,14 @@ import RecordListItem from '../components/RecordListItem';
 import { useRecords } from '../context/RecordsContext';
 
 export default function RecordsScreen({ navigation }) {
-  const { records, loading } = useRecords();
+  
+const { records, loading } = useRecords();
+
+const approvedRecords = records.filter(
+  (record) =>
+    String(record.approvalStatus || '').trim().toLowerCase() === 'approved'
+);
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -36,7 +43,7 @@ export default function RecordsScreen({ navigation }) {
       </View>
 
       <Text style={styles.subtitle}>
-        {records.length} total
+        {approvedRecords.length} total
       </Text>
 
       {loading ? (
@@ -45,7 +52,7 @@ export default function RecordsScreen({ navigation }) {
         </View>
       ) : (
         <FlatList
-          data={records}
+          data={approvedRecords}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <RecordListItem

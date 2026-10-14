@@ -45,11 +45,44 @@ export function RecordsProvider({ children }) {
     return () => unsubscribe();
   }, []);
 
+  // Download approved records whenever internet is available.
+  useEffect(() => {
+    if (!isOnline || loading) return;
+
+    syncApprovedRecords().catch((error) => {
+      console.log('Approved records sync failed:', error.message);
+    });
+  }, [isOnline, loading]);
+
   const updateRecordStatus = async (id, status) => {
-    const db = await getDatabase();
-    await db.runAsync('UPDATE plants SET status = ? WHERE id = ?', [status, id]);
-    setRecords((current) => current.map((r) => (r.id === id ? { ...r, status } : r)));
-  };
+  const db = await getDatabase();
+
+  await db.runAsync(
+    'UPDATE plants SET status = ? WHERE id = ?',
+    [status, id]
+  );
+
+  setRecords((current) =>
+    current.map((r) => (r.id === id ? { ...r, status } : r))
+  );
+};
+
+const updateRecordServerId = async (id, serverId) => {
+  if (serverId === null || serverId === undefined) return;
+
+  const db = await getDatabase();
+
+  await db.runAsync(
+    'UPDATE plants SET serverId = ? WHERE id = ?',
+    [String(serverId), id]
+  );
+
+  setRecords((current) =>
+    current.map((r) =>
+      r.id === id ? { ...r, serverId: String(serverId) } : r
+    )
+  );
+};
 
   // Saves a record on the phone first. If the phone is online, it also
   // tries to send it to the cloud right away. Returns 'synced' if that
@@ -110,12 +143,20 @@ export function RecordsProvider({ children }) {
 
       if (tookLock) {
         try {
-          await syncRecordToCloud(localRecord);
+          const response = await syncRecordToCloud(localRecord);
+
+          await updateRecordServerId(record.id, response.id);
           await updateRecordStatus(record.id, 'synced');
+
           delete retryRef.current[record.id];
           finalStatus = 'synced';
         } catch (e) {
-          console.log('Online sync failed for', record.id, '- keeping record pending:', e.message);
+          console.log(
+            'Online sync failed for',
+            record.id,
+            '- keeping record pending:',
+            e.message
+          );
         }
       }
     } finally {
@@ -127,7 +168,88 @@ export function RecordsProvider({ children }) {
     return finalStatus;
   };
 
-  const findRecordById = (id) => records.find((r) => r.id === id);
+  const findRecordById = (id) =>
+  records.find(
+    (r) =>
+      String(r.id) === String(id) ||
+      String(r.serverId) === String(id)
+  );
+
+
+const syncApprovedRecords = async () => {
+  const db = await getDatabase();
+
+  const response = await fetch('http://52.62.125.146/api/plants');
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch plants: ${response.status}`);
+  }
+
+  const data = await response.json();
+
+  const approvedPlants = data.filter(
+    (plant) =>
+      String(plant.plant_status || '').trim().toLowerCase() === 'approved'
+  );
+
+  for (const plant of approvedPlants) {
+    const serverId = String(plant.id);
+
+    const existing = await db.getFirstAsync(
+      'SELECT id FROM plants WHERE serverId = ?',
+      [serverId]
+    );
+
+    const localId = existing?.id || `cloud-${serverId}`;
+
+    await db.runAsync(
+      `INSERT INTO plants (
+        id, serverId, scientificName, commonName, family,
+        height, diameter, latitude, longitude, notes,
+        photos, status, approvalStatus, createdAt
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        serverId = excluded.serverId,
+        scientificName = excluded.scientificName,
+        commonName = excluded.commonName,
+        family = excluded.family,
+        height = excluded.height,
+        diameter = excluded.diameter,
+        latitude = excluded.latitude,
+        longitude = excluded.longitude,
+        notes = excluded.notes,
+        approvalStatus = excluded.approvalStatus`,
+      [
+        localId,
+        serverId,
+        plant.scientific_name || '',
+        plant.common_name || '',
+        plant.family || '',
+        plant.height_m != null ? String(plant.height_m) : '',
+        plant.diameter_cm != null ? String(plant.diameter_cm) : '',
+        plant.latitude != null ? String(plant.latitude) : '',
+        plant.longitude != null ? String(plant.longitude) : '',
+        plant.morphological_notes || '',
+        JSON.stringify([]),
+        'synced',
+        'Approved',
+        plant.created_at || new Date().toISOString(),
+      ]
+    );
+  }
+
+  const rows = await db.getAllAsync(
+    'SELECT * FROM plants ORDER BY createdAt DESC'
+  );
+
+  setRecords(
+    rows.map((r) => ({
+      ...r,
+      photos: JSON.parse(r.photos || '[]'),
+    }))
+  );
+};
+
 
   // Temporary helper for testing.
   const deleteRecord = async (id) => {
@@ -156,7 +278,9 @@ export function RecordsProvider({ children }) {
       try {
         for (const record of due) {
           try {
-            await syncRecordToCloud(record);
+            const response = await syncRecordToCloud(record);
+
+            await updateRecordServerId(record.id, response.id);
             await updateRecordStatus(record.id, 'synced');
             delete retryRef.current[record.id];
           } catch (e) {
@@ -180,6 +304,7 @@ export function RecordsProvider({ children }) {
         records,
         addRecord,
         findRecordById,
+        syncApprovedRecords,
         updateRecordStatus,
         deleteRecord,
         isOnline,
