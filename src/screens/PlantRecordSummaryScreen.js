@@ -10,6 +10,7 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
   const { record, readOnly } = route.params;
   const { addRecord } = useRecords();
   const [submitting, setSubmitting] = useState(false);
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(null);
 
   const handleSend = () => {
     if (submitting) return;
@@ -77,9 +78,16 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Photos</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoList}>
+              
               {record.photos.map((uri, index) => (
-                <Image key={`${uri}-${index}`} source={{ uri }} style={styles.photo} />
+                <TouchableOpacity
+                  key={`${uri}-${index}`}
+                  onPress={() => setSelectedPhotoIndex(index)}
+                >
+                  <Image source={{ uri }} style={styles.photo} />
+                </TouchableOpacity>
               ))}
+
             </ScrollView>
           </View>
         )}
@@ -138,6 +146,52 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
           </View>
         )}
       </ScrollView>
+
+        {selectedPhotoIndex !== null && (
+          <View style={styles.fullScreenOverlay}>
+            <TouchableOpacity
+              style={styles.closePhoto}
+              onPress={() => setSelectedPhotoIndex(null)}
+            >
+              <Ionicons name="close" size={30} color="#FFFFFF" />
+            </TouchableOpacity>
+
+            <Image
+              source={{ uri: record.photos[selectedPhotoIndex] }}
+              style={styles.fullScreenPhoto}
+              resizeMode="contain"
+            />
+
+            {record.photos.length > 1 && (
+              <View style={styles.photoNavigation}>
+                <TouchableOpacity
+                  onPress={() =>
+                    setSelectedPhotoIndex(
+                      (selectedPhotoIndex - 1 + record.photos.length) %
+                        record.photos.length
+                    )
+                  }
+                >
+                  <Ionicons name="chevron-back" size={32} color="#FFFFFF" />
+                </TouchableOpacity>
+
+                <Text style={styles.photoCounter}>
+                  {selectedPhotoIndex + 1} / {record.photos.length}
+                </Text>
+
+                <TouchableOpacity
+                  onPress={() =>
+                    setSelectedPhotoIndex(
+                      (selectedPhotoIndex + 1) % record.photos.length
+                    )
+                  }
+                >
+                  <Ionicons name="chevron-forward" size={32} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
     </SafeAreaView>
   );
 }
@@ -174,4 +228,9 @@ const styles = StyleSheet.create({
   editButtonText: { color: colors.textPrimary, fontSize: 14, fontWeight: '600' },
   sendButton: { flex: 1, height: 48, borderRadius: 8, backgroundColor: colors.accentText, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   sendButtonText: { color: colors.buttonText, fontSize: 14, fontWeight: '600' },
+  fullScreenOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: '#000000', zIndex: 999, alignItems: 'center', justifyContent: 'center', },
+  closePhoto: { position: 'absolute', top: 20, right: 20, zIndex: 2, padding: 10, },
+  fullScreenPhoto: { width: '100%', height: '75%', },
+  photoNavigation: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '70%', marginTop: 20, },
+  photoCounter: { color: '#FFFFFF', fontSize: 16, },
 });

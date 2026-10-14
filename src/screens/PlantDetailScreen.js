@@ -1,11 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Pressable,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Image, TouchableOpacity, } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
@@ -26,11 +20,23 @@ export default function PlantDetailScreen({ navigation, route }) {
 
         const data = await response.json();
 
+        
         const foundPlant = data.find(
           (item) => String(item.id) === String(plantId)
         );
 
-        setPlant(foundPlant || null);
+        if (foundPlant) {
+          setPlant({
+            ...foundPlant,
+            images: Array.isArray(foundPlant.images)
+              ? foundPlant.images
+              : [],
+          });
+        } else {
+          setPlant(null);
+        }
+
+        
       } catch (error) {
         console.error('Failed to load plant:', error);
         setPlant(null);
@@ -100,6 +106,34 @@ export default function PlantDetailScreen({ navigation, route }) {
         <Text style={styles.detail}>
           {plant.plant_status || 'Pending'}
         </Text>
+
+
+          {plant.images?.length > 0 && (
+            <View style={styles.imagesSection}>
+              <Text style={styles.sectionTitle}>Photos</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.imagesList}
+              >
+                {plant.images.map((uri, index) => (
+                  <TouchableOpacity
+                    key={`${uri}-${index}`}
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      // Full-screen viewer akan kita tambah kemudian.
+                    }}
+                  >
+                    <Image
+                      source={{ uri }}
+                      style={styles.plantImage}
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
         <View style={styles.divider} />
 
@@ -211,6 +245,22 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.textSecondary,
     textAlign: 'center',
+  },
+
+  imagesSection: {
+    marginTop: 24,
+    marginBottom: 8,
+  },
+
+  imagesList: {
+    gap: 10,
+    paddingVertical: 4,
+  },
+
+  plantImage: {
+    width: 150,
+    height: 150,
+    borderRadius: 12,
   },
 
   divider: {

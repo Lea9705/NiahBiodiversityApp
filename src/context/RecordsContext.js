@@ -218,6 +218,7 @@ const syncApprovedRecords = async () => {
         latitude = excluded.latitude,
         longitude = excluded.longitude,
         notes = excluded.notes,
+        photos = excluded.photos,
         approvalStatus = excluded.approvalStatus`,
       [
         localId,
@@ -230,7 +231,9 @@ const syncApprovedRecords = async () => {
         plant.latitude != null ? String(plant.latitude) : '',
         plant.longitude != null ? String(plant.longitude) : '',
         plant.morphological_notes || '',
-        JSON.stringify([]),
+        JSON.stringify(
+          Array.isArray(plant.images) ? plant.images : []
+        ),
         'synced',
         'Approved',
         plant.created_at || new Date().toISOString(),
