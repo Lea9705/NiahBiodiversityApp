@@ -6,6 +6,7 @@ import * as Device from 'expo-device';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Location from 'expo-location';
 import { colors } from '../theme/colors';
 import StyledInput from '../components/StyledInput';
@@ -49,39 +50,80 @@ export default function NewPlantRecordScreen({ navigation }) {
       ]
     );
   };
+ 
+  const savePhotoLocally = async (uri) => {
+    const directory = FileSystem.documentDirectory;
+
+    if (!directory) {
+      throw new Error('App storage is unavailable.');
+    }
+
+    const filename = `plant_photo_${Date.now()}_${Math.random()
+      .toString(36)
+      .slice(2, 8)}.jpg`;
+
+    const destination = `${directory}${filename}`;
+
+    await FileSystem.copyAsync({
+      from: uri,
+      to: destination,
+    });
+
+    return destination;
+  };
 
   const capturePhoto = async () => {
-    if (__DEV__ && Platform.OS === 'ios' && Device.isDevice === false) {
-      const libraryPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    try {
+      let result;
 
-      if (!libraryPermission.granted) {
-        Alert.alert('Photo library permission needed', 'Allow photo library access to select a test image.');
+      if (__DEV__ && Platform.OS === 'ios' && Device.isDevice === false) {
+        const permission =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+        if (!permission.granted) {
+          Alert.alert(
+            'Photo library permission needed',
+            'Allow photo library access to select a test image.'
+          );
+          return;
+        }
+
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          quality: 0.6,
+          allowsMultipleSelection: false,
+        });
+      } else {
+        const permission =
+          await ImagePicker.requestCameraPermissionsAsync();
+
+        if (!permission.granted) {
+          Alert.alert(
+            'Camera permission needed',
+            'Camera access is required to capture a plant photo.'
+          );
+          return;
+        }
+
+        result = await ImagePicker.launchCameraAsync({
+          quality: 0.6,
+        });
+      }
+
+      if (result.canceled || !result.assets?.length) {
         return;
       }
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.6,
-        allowsMultipleSelection: false,
-      });
+      const savedUri = await savePhotoLocally(result.assets[0].uri);
 
-      if (!result.canceled && result.assets?.length > 0) {
-        setPhotos((current) => [...current, result.assets[0].uri]);
-      }
-      return;
-    }
+      setPhotos((current) => [...current, savedUri]);
+    } catch (error) {
+      console.error('[Photo] Failed to save image locally:', error);
 
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-
-    if (!permission.granted) {
-      Alert.alert('Camera permission needed', 'Camera access is required to capture a plant photo.');
-      return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({ quality: 0.6 });
-
-    if (!result.canceled && result.assets?.length > 0) {
-      setPhotos((current) => [...current, result.assets[0].uri]);
+      Alert.alert(
+        'Could not save photo',
+        'Please try taking the photo again.'
+      );
     }
   };
 

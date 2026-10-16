@@ -1,320 +1,338 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Image, TouchableOpacity, } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
 
-export default function PlantDetailScreen({ navigation, route }) {
-  const { plantId } = route.params || {};
-  const [plant, setPlant] = useState(null);
-  const [loading, setLoading] = useState(true);
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { useRecords } from '../context/RecordsContext';
+
+const API_URL = 'http://52.62.125.146/api/plants';
+
+function getPhotoUri(photo) {
+  if (typeof photo === 'string') return photo;
+  if (photo && typeof photo === 'object') {
+    return photo.uri || photo.url || photo.image_url || null;
+  }
+  return null;
+}
+
+function normalizeLocalPlant(record) {
+  return {
+    ...record,
+    id: record.serverId || record.id,
+    scientific_name: record.scientificName,
+    common_name: record.commonName,
+    height_m: record.height,
+    diameter_cm: record.diameter,
+    morphological_notes: record.notes,
+    images: Array.isArray(record.photos) ? record.photos : [],
+    plant_status: record.approvalStatus,
+  };
+}
+
+export default function PlantDetailScreen({ route }) {
+  const { plantId, plant: passedPlant } = route.params || {};
+  const { records, loading: recordsLoading } = useRecords();
+
+  const [plant, setPlant] = useState(passedPlant || null);
+  const [loading, setLoading] = useState(!passedPlant);
 
   useEffect(() => {
-    const fetchPlant = async () => {
+    let cancelled = false;
+
+    async function loadPlant() {
+      // First, show the plant passed from the QR scanner.
+      if (passedPlant) {
+        setPlant(passedPlant);
+      }
+
+      // Next, check the locally saved approved records.
+      const localRecord = records.find((record) => {
+        const matches =
+          String(record.id) === String(plantId) ||
+          String(record.serverId ?? '') === String(plantId);
+
+        return (
+          matches &&
+          String(record.approvalStatus ?? '')
+            .trim()
+            .toLowerCase() === 'approved'
+        );
+      });
+
+      if (localRecord && !cancelled) {
+        setPlant(normalizeLocalPlant(localRecord));
+      }
+
+      // Finally, try the API if internet is available.
       try {
-        const response = await fetch('http://52.62.125.146/api/plants');
+        const response = await fetch(API_URL);
 
         if (!response.ok) {
-          throw new Error(`Failed to fetch plant: ${response.status}`);
+          throw new Error(`Request failed: ${response.status}`);
         }
 
-        const data = await response.json();
+        const result = await response.json();
+        const plants = Array.isArray(result)
+          ? result
+          : Array.isArray(result.plants)
+            ? result.plants
+            : [];
 
-        
-        const foundPlant = data.find(
-          (item) => String(item.id) === String(plantId)
+        const onlinePlant = plants.find(
+          (item) =>
+            String(item.id) === String(plantId) &&
+            String(item.plant_status || '').trim().toLowerCase() ===
+              'approved'
         );
 
-        if (foundPlant) {
-          setPlant({
-            ...foundPlant,
-            images: Array.isArray(foundPlant.images)
-              ? foundPlant.images
-              : [],
-          });
-        } else {
+        if (!cancelled && onlinePlant) {
+          setPlant(onlinePlant);
+        } else if (
+          !cancelled &&
+          !localRecord &&
+          !passedPlant
+        ) {
           setPlant(null);
         }
-
-        
       } catch (error) {
-        console.error('Failed to load plant:', error);
-        setPlant(null);
+        console.log(
+          '[PlantDetail] API unavailable; checking saved data.',
+          error.message
+        );
+
+        if (!cancelled && !localRecord && !passedPlant) {
+          setPlant(null);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
+    }
+
+    if (!recordsLoading) {
+      loadPlant();
+    }
+
+    return () => {
+      cancelled = true;
     };
+  }, [plantId, passedPlant, records, recordsLoading]);
 
-    fetchPlant();
-  }, [plantId]);
-
-  if (loading) {
+  if (loading || recordsLoading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <Text style={styles.errorText}>Loading plant information...</Text>
-      </SafeAreaView>
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#287A45" />
+        <Text style={styles.message}>Loading plant details...</Text>
+      </View>
     );
   }
 
   if (!plant) {
     return (
-      <SafeAreaView style={styles.container}>
-        <Pressable
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons
-            name="arrow-back"
-            size={22}
-            color={colors.textPrimary}
-          />
-          <Text style={styles.backText}>Back</Text>
-        </Pressable>
-
-        <Text style={styles.errorText}>
-          Plant record not found.
+      <View style={styles.center}>
+        <Text style={styles.errorTitle}>Plant record not found</Text>
+        <Text style={styles.message}>
+          This approved plant is not available on this device.
+          Connect to the internet and try again.
         </Text>
-      </SafeAreaView>
+      </View>
     );
   }
 
+  const photos = Array.isArray(plant.images)
+    ? plant.images
+    : Array.isArray(plant.photos)
+      ? plant.photos
+      : [];
+
+  const photoUris = photos.map(getPhotoUri).filter(Boolean);
+
+  const commonName =
+    plant.common_name || plant.commonName || 'Unknown plant';
+
+  const scientificName =
+    plant.scientific_name || plant.scientificName || 'Not available';
+
+  const family = plant.family || 'Not available';
+  const height = plant.height_m ?? plant.height;
+  const diameter = plant.diameter_cm ?? plant.diameter;
+  const notes =
+    plant.morphological_notes || plant.notes || 'No notes available.';
+
   return (
-    <SafeAreaView style={styles.container}>
-      <Pressable
-        style={styles.backButton}
-        onPress={() => navigation.goBack()}
-      >
-        <Ionicons
-          name="arrow-back"
-          size={22}
-          color={colors.textPrimary}
-        />
-        <Text style={styles.backText}>Back</Text>
-      </Pressable>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+    >
+      <Text style={styles.title}>{commonName}</Text>
+      <Text style={styles.scientific}>{scientificName}</Text>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.iconContainer}>
-          <Ionicons
-            name="leaf-outline"
-            size={48}
-            color={colors.successText}
-          />
-        </View>
-
-        <Text style={styles.name}>{plant.scientific_name}</Text>
-
-        <Text style={styles.detail}>
-          {plant.plant_status || 'Pending'}
-        </Text>
-
-
-          {plant.images?.length > 0 && (
-            <View style={styles.imagesSection}>
-              <Text style={styles.sectionTitle}>Photos</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.imagesList}
-              >
-                {plant.images.map((uri, index) => (
-                  <TouchableOpacity
-                    key={`${uri}-${index}`}
-                    activeOpacity={0.8}
-                    onPress={() => {
-                      // Full-screen viewer akan kita tambah kemudian.
-                    }}
-                  >
-                    <Image
-                      source={{ uri }}
-                      style={styles.plantImage}
-                      resizeMode="cover"
-                    />
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
-
-        <View style={styles.divider} />
-
-        <Text style={styles.sectionTitle}>Plant information</Text>
-
-        <View style={styles.infoCard}>
-          <Text style={styles.label}>Scientific name</Text>
-          <Text style={styles.value}>
-            {plant.scientific_name || 'Not available'}
-          </Text>
-
-          <Text style={styles.label}>Common name</Text>
-          <Text style={styles.value}>
-            {plant.common_name || 'Not available'}
-          </Text>
-
-          <Text style={styles.label}>Family</Text>
-          <Text style={styles.value}>
-            {plant.family || 'Not available'}
-          </Text>
-
-          <Text style={styles.label}>Height</Text>
-          <Text style={styles.value}>
-            {plant.height_m != null ? `${plant.height_m} m` : 'Not available'}
-          </Text>
-
-          <Text style={styles.label}>Diameter</Text>
-          <Text style={styles.value}>
-            {plant.diameter_cm != null
-              ? `${plant.diameter_cm} cm`
-              : 'Not available'}
-          </Text>
-
-          <Text style={styles.label}>Morphological notes</Text>
-          <Text style={styles.value}>
-            {plant.morphological_notes || 'Not available'}
-          </Text>
-
-          <Text style={styles.label}>Location</Text>
-          <Text style={styles.value}>
-            {plant.latitude && plant.longitude
-              ? `${plant.latitude}, ${plant.longitude}`
-              : 'Not available'}
-          </Text>
-
-          <Text style={styles.label}>Status</Text>
-          <Text style={styles.value}>
-            {plant.plant_status || 'Pending'}
-          </Text>
-        </View>
-
-        <View style={styles.noteCard}>
-          <Ionicons
-            name="information-circle-outline"
-            size={20}
-            color={colors.accentText}
-          />
-
-        <Text style={styles.noteText}>
-          This information is retrieved from the biodiversity database.
-        </Text>
+      <View style={styles.statusBadge}>
+        <Text style={styles.statusText}>Approved</Text>
       </View>
-      </ScrollView>
-    </SafeAreaView>
+
+      <Text style={styles.sectionTitle}>Plant Photos</Text>
+
+      {photoUris.length > 0 ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {photoUris.map((uri, index) => (
+            <Image
+              key={`${uri}-${index}`}
+              source={{ uri }}
+              style={styles.photo}
+              resizeMode="cover"
+            />
+          ))}
+        </ScrollView>
+      ) : (
+        <View style={styles.noPhoto}>
+          <Text style={styles.message}>No photos available offline.</Text>
+        </View>
+      )}
+
+      <Text style={styles.sectionTitle}>Plant Information</Text>
+
+      <InfoRow label="Family" value={family} />
+      <InfoRow
+        label="Height (m)"
+        value={height == null || height === '' ? 'Not available' : String(height)}
+      />
+      <InfoRow
+        label="Diameter (cm)"
+        value={
+          diameter == null || diameter === ''
+            ? 'Not available'
+            : String(diameter)
+        }
+      />
+      <InfoRow
+        label="Latitude"
+        value={plant.latitude == null ? 'Not available' : String(plant.latitude)}
+      />
+      <InfoRow
+        label="Longitude"
+        value={
+          plant.longitude == null ? 'Not available' : String(plant.longitude)
+        }
+      />
+
+      <Text style={styles.sectionTitle}>Morphological Notes</Text>
+      <Text style={styles.notes}>{String(notes)}</Text>
+    </ScrollView>
+  );
+}
+
+function InfoRow({ label, value }) {
+  return (
+    <View style={styles.infoRow}>
+      <Text style={styles.infoLabel}>{label}</Text>
+      <Text style={styles.infoValue}>{value}</Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg,
-    padding: 16,
+    backgroundColor: '#F7F8F5',
   },
-
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingVertical: 8,
-    marginBottom: 20,
+  content: {
+    padding: 20,
+    paddingBottom: 36,
   },
-
-  backText: {
-    fontSize: 16,
-    color: colors.textPrimary,
-    marginLeft: 6,
-  },
-
-  iconContainer: {
-    width: 96,
-    height: 96,
-    borderRadius: 20,
-    backgroundColor: colors.successBg,
-    alignItems: 'center',
+  center: {
+    flex: 1,
     justifyContent: 'center',
-    alignSelf: 'center',
-    marginBottom: 20,
+    alignItems: 'center',
+    padding: 24,
+    backgroundColor: '#F7F8F5',
   },
-
-  name: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: 8,
+  title: {
+    fontSize: 25,
+    fontWeight: 'bold',
+    color: '#214D32',
+    marginBottom: 6,
   },
-
-  detail: {
-    fontSize: 15,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-
-  imagesSection: {
-    marginTop: 24,
-    marginBottom: 8,
-  },
-
-  imagesList: {
-    gap: 10,
-    paddingVertical: 4,
-  },
-
-  plantImage: {
-    width: 150,
-    height: 150,
-    borderRadius: 12,
-  },
-
-  divider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginVertical: 24,
-  },
-
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.textPrimary,
+  scientific: {
+    fontSize: 16,
+    fontStyle: 'italic',
+    color: '#666666',
     marginBottom: 12,
   },
-
-  infoCard: {
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    padding: 16,
+  statusBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#E1F2E5',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginBottom: 22,
   },
-
-  label: {
-    fontSize: 12,
-    color: colors.textMuted,
-    marginTop: 8,
-    marginBottom: 4,
+  statusText: {
+    color: '#24683A',
+    fontWeight: '600',
   },
-
-  value: {
-    fontSize: 15,
-    color: colors.textPrimary,
-    marginBottom: 8,
-  },
-
-  noteCard: {
-    flexDirection: 'row',
-    backgroundColor: colors.accentBg,
-    borderRadius: 12,
-    padding: 14,
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#214D32',
     marginTop: 16,
-    marginBottom: 30,
+    marginBottom: 12,
   },
-
-  noteText: {
+  photo: {
+    width: 220,
+    height: 180,
+    borderRadius: 12,
+    marginRight: 12,
+    backgroundColor: '#E5E5E5',
+  },
+  noPhoto: {
+    padding: 18,
+    borderRadius: 10,
+    backgroundColor: '#EEEEEA',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E5DF',
+    gap: 16,
+  },
+  infoLabel: {
     flex: 1,
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginLeft: 10,
-    lineHeight: 19,
+    color: '#666666',
+    fontSize: 14,
   },
-
-  errorText: {
-    color: colors.textPrimary,
-    fontSize: 16,
-    marginTop: 30,
+  infoValue: {
+    flex: 1,
+    color: '#222222',
+    fontSize: 14,
+    textAlign: 'right',
+  },
+  notes: {
+    fontSize: 15,
+    lineHeight: 23,
+    color: '#333333',
+    backgroundColor: '#FFFFFF',
+    padding: 14,
+    borderRadius: 10,
+  },
+  message: {
+    color: '#666666',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginTop: 8,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#9B3030',
+    textAlign: 'center',
   },
 });

@@ -5,6 +5,8 @@ import RoleSelectScreen from '../screens/RoleSelectScreen';
 import BotanistLoginScreen from '../screens/BotanistLoginScreen';
 import BotanistHomeScreen from '../screens/BotanistHomeScreen';
 import VisitorHomeScreen from '../screens/VisitorHomeScreen';
+import VisitorExploreScreen from '../screens/VisitorExploreScreen';
+import VisitorMapScreen from '../screens/VisitorMapScreen';
 import NewPlantRecordScreen from '../screens/NewPlantRecordScreen';
 import PlantRecordSummaryScreen from '../screens/PlantRecordSummaryScreen';
 import PlantDetailScreen from '../screens/PlantDetailScreen';
@@ -30,6 +32,8 @@ export default function AppNavigator() {
         <Stack.Screen name="BotanistLogin" component={BotanistLoginScreen} />
         <Stack.Screen name="BotanistHome" component={BotanistHomeScreen} />
         <Stack.Screen name="VisitorHome" component={VisitorHomeScreen} />
+        <Stack.Screen name="VisitorExplore" component={VisitorExploreScreen} />
+        <Stack.Screen name="VisitorMap" component={VisitorMapScreen} />
         <Stack.Screen name="NewPlantRecord" component={NewPlantRecordScreen} />
         <Stack.Screen name="PlantRecordSummary" component={PlantRecordSummaryScreen} />
         <Stack.Screen name="PlantDetail" component={PlantDetailScreen} />

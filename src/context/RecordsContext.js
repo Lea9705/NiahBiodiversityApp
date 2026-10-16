@@ -168,12 +168,26 @@ const updateRecordServerId = async (id, serverId) => {
     return finalStatus;
   };
 
-  const findRecordById = (id) =>
-  records.find(
-    (r) =>
-      String(r.id) === String(id) ||
-      String(r.serverId) === String(id)
-  );
+  const findRecordById = (id) => {
+    console.log('[QR LOOKUP] Scanned ID:', id);
+
+    console.log(
+      '[QR LOOKUP] Local records:',
+      records.map((r) => ({
+        id: r.id,
+        serverId: r.serverId,
+        commonName: r.commonName,
+        status: r.status,
+        approvalStatus: r.approvalStatus,
+      }))
+    );
+
+    return records.find(
+      (r) =>
+        String(r.id) === String(id) ||
+        String(r.serverId) === String(id)
+    );
+  };
 
 
 const syncApprovedRecords = async () => {

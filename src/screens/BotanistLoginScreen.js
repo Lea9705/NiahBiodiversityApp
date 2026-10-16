@@ -1,7 +1,18 @@
-// Botanist login only - no self-signup, matching the requirement that
-// botanist accounts are created by an admin.
+// Botanist login only - no self-signup.
+// Styled to match the Niah Biodiversity botanical theme.
+
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ImageBackground } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ImageBackground,
+  StatusBar,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
@@ -12,22 +23,26 @@ export default function BotanistLoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = () => {
     const newErrors = {};
-    if (!email) newErrors.email = '*Please enter your staff email';
-    if (!password) newErrors.password = '*Please enter your password';
+
+    if (!email.trim()) {
+      newErrors.email = '*Please enter your staff email';
+    }
+
+    if (!password) {
+      newErrors.password = '*Please enter your password';
+    }
+
     setErrors(newErrors);
+
     if (Object.keys(newErrors).length > 0) return;
 
-    // TODO: replace with a real API call to your backend teammate's auth endpoint, e.g.
-    // const res = await fetch(`${API_URL}/auth/login`, {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ email, password, role: 'botanist' }),
-    // });
-    // const { token } = await res.json();
-    // await SecureStore.setItemAsync('token', token); // needs expo-secure-store
+    // Keep the existing navigation behaviour.
+    // Replace this with the real backend authentication API
+    // when the endpoint is ready.
     navigation.navigate('BotanistHome');
   };
 
@@ -37,66 +52,355 @@ export default function BotanistLoginScreen({ navigation }) {
       style={styles.container}
       resizeMode="cover"
     >
-      <SafeAreaView style={styles.overlay}>
-      <TouchableOpacity style={styles.back} onPress={() => navigation.goBack()}>
-        <Ionicons name="arrow-back" size={16} color={colors.textSecondary} />
-        <Text style={styles.backText}>Back</Text>
-      </TouchableOpacity>
+      <StatusBar barStyle="light-content" />
 
-      <View style={styles.logoWrap}>
-        <View style={[styles.logo, { backgroundColor: colors.accentBg }]}>
-          <Ionicons name="clipboard-outline" size={22} color={colors.accentText} />
-        </View>
-        <Text style={styles.title}>Botanist Login</Text>
-        <Text style={styles.subtitle}>Field Staff and Conservation Team</Text>
+      <View style={styles.overlay}>
+        <SafeAreaView style={styles.safeArea}>
+          <TouchableOpacity
+            style={styles.back}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="arrow-back"
+              size={20}
+              color="#E2E9E2"
+            />
+            <Text style={styles.backText}>Back</Text>
+          </TouchableOpacity>
+
+          <KeyboardAvoidingView
+            style={styles.keyboardArea}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
+            <ScrollView
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Header */}
+              <View style={styles.header}>
+                <View style={styles.logo}>
+                  <Ionicons
+                    name="clipboard-outline"
+                    size={32}
+                    color="#55B8FF"
+                  />
+                </View>
+
+                <Text style={styles.title}>Botanist Login</Text>
+
+                <Text style={styles.subtitle}>
+                  Field Staff and Conservation Team
+                </Text>
+
+                <View style={styles.roleBadge}>
+                  <Ionicons
+                    name="leaf-outline"
+                    size={15}
+                    color="#8BD66D"
+                  />
+                  <Text style={styles.roleBadgeText}>BOTANIST ACCESS</Text>
+                </View>
+              </View>
+
+              {/* Login form */}
+              <View style={styles.formCard}>
+                <Text style={styles.formTitle}>Welcome back</Text>
+
+                <Text style={styles.formSubtitle}>
+                  Sign in with your staff account to continue.
+                </Text>
+
+                <View style={styles.inputGroup}>
+                  <StyledInput
+                    label="Staff Email"
+                    placeholder="name@sarawakforestry.com"
+                    value={email}
+                    onChangeText={(value) => {
+                      setEmail(value);
+                      if (errors.email) {
+                        setErrors((previous) => ({
+                          ...previous,
+                          email: '',
+                        }));
+                      }
+                    }}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    error={errors.email}
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <StyledInput
+                    label="Password"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChangeText={(value) => {
+                      setPassword(value);
+                      if (errors.password) {
+                        setErrors((previous) => ({
+                          ...previous,
+                          password: '',
+                        }));
+                      }
+                    }}
+                    secureTextEntry={!showPassword}
+                    error={errors.password}
+                  />
+
+                  <TouchableOpacity
+                    style={styles.passwordToggle}
+                    onPress={() =>
+                      setShowPassword((previous) => !previous)
+                    }
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={19}
+                      color="#A9B8AB"
+                    />
+                    <Text style={styles.passwordToggleText}>
+                      {showPassword ? 'Hide password' : 'Show password'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.forgotButton}
+                  onPress={() => {
+                    alert(
+                      'Password reset is not available yet. Please contact your administrator.'
+                    );
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.forgot}>
+                    Forgot Password?
+                  </Text>
+                </TouchableOpacity>
+
+                <PrimaryButton
+                  title="Log in"
+                  onPress={handleLogin}
+                  style={styles.loginButton}
+                />
+
+                <View style={styles.securityNote}>
+                  <Ionicons
+                    name="shield-checkmark-outline"
+                    size={18}
+                    color="#8BD66D"
+                  />
+
+                  <Text style={styles.note}>
+                    Botanist accounts are created by an administrator.
+                    Contact your supervisor for access.
+                  </Text>
+                </View>
+              </View>
+
+              {/* Footer */}
+              <View style={styles.footer}>
+                <Ionicons
+                  name="leaf-outline"
+                  size={14}
+                  color="#91B79A"
+                />
+                <Text style={styles.footerText}>
+                  DISCOVER · DOCUMENT · CONSERVE
+                </Text>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
       </View>
-
-      <StyledInput
-        label="Staff Email"
-        placeholder="name@sarawakforestry.com"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        error={errors.email}
-      />
-      <StyledInput
-        label="Password"
-        placeholder="Enter Your Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        error={errors.password}
-      />
-
-    <TouchableOpacity
-      onPress={() => {
-        alert('Password reset is not available yet. Please contact your administrator.');
-      }}
-      activeOpacity={0.7}
-    >
-      <Text style={styles.forgot}>Forgot Password?</Text>
-    </TouchableOpacity>
-
-      <PrimaryButton title="Log in" onPress={handleLogin} style={{ marginBottom: 14 }} />
-
-      <Text style={styles.note}>
-        Botanist accounts are created by an administrator. Contact your supervisor for access.
-      </Text>
-      </SafeAreaView>
     </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, },
-  overlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.78)', padding: 20, justifyContent: 'center', },
-  back: { position: 'absolute', top: 50, left: 20, flexDirection: 'row', alignItems: 'center', paddingVertical: 8, zIndex: 10, elevation: 10, },
-  backText: { color: colors.textSecondary, fontSize: 13 },
-  logoWrap: { alignItems: 'center', marginBottom: 24 },
-  logo: { width: 48, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
-  title: { fontSize: 20, fontWeight: '700', color: '#FFFFFF',  textAlign: 'center', textShadowColor: 'rgba(0, 0, 0, 0.8)',  textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3, },
-  subtitle: { fontSize: 14,  color: '#FFFFFF', marginTop: 5,  textAlign: 'center',  textShadowColor: 'rgba(0, 0, 0, 0.8)',  textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3, },
-  forgot: { textAlign: 'right', fontSize: 12, color: colors.accentText, marginBottom: 18 },
-  note: { textAlign: 'center', fontSize: 12, color: '#FFFFFF', lineHeight: 18, marginTop: 2, textShadowColor: 'rgba(0, 0, 0, 0.8)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3, },
+  container: {
+    flex: 1,
+    backgroundColor: '#101711',
+  },
+
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(5, 12, 8, 0.76)',
+  },
+
+  safeArea: {
+    flex: 1,
+  },
+
+  back: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 7,
+    paddingHorizontal: 22,
+    paddingTop: 8,
+    paddingBottom: 6,
+    zIndex: 2,
+  },
+
+  backText: {
+    color: '#E2E9E2',
+    fontSize: 14,
+  },
+
+  keyboardArea: {
+    flex: 1,
+  },
+
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 22,
+    paddingTop: 20,
+    paddingBottom: 26,
+  },
+
+  header: {
+    alignItems: 'center',
+    marginBottom: 28,
+  },
+
+  logo: {
+    width: 78,
+    height: 78,
+    borderRadius: 25,
+    backgroundColor: '#10364A',
+    borderWidth: 1,
+    borderColor: 'rgba(85, 184, 255, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 17,
+  },
+
+  title: {
+    fontSize: 27,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+    color: '#F5F6F0',
+    textAlign: 'center',
+  },
+
+  subtitle: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: '#C5D0C7',
+    textAlign: 'center',
+    marginTop: 7,
+  },
+
+  roleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(92, 174, 103, 0.55)',
+    backgroundColor: 'rgba(20, 61, 34, 0.8)',
+    marginTop: 18,
+  },
+
+  roleBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    color: '#A7D99A',
+  },
+
+  formCard: {
+    backgroundColor: 'rgba(20, 31, 24, 0.94)',
+    borderWidth: 1,
+    borderColor: 'rgba(157, 190, 158, 0.38)',
+    borderRadius: 24,
+    padding: 20,
+  },
+
+  formTitle: {
+    fontSize: 21,
+    fontWeight: '700',
+    color: '#F5F6F0',
+  },
+
+  formSubtitle: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#AEBBB0',
+    marginTop: 6,
+    marginBottom: 22,
+  },
+
+  inputGroup: {
+    marginBottom: 13,
+  },
+
+  passwordToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    gap: 6,
+    paddingTop: 10,
+    paddingBottom: 3,
+  },
+
+  passwordToggleText: {
+    fontSize: 12,
+    color: '#A9B8AB',
+  },
+
+  forgotButton: {
+    alignSelf: 'flex-end',
+    paddingVertical: 8,
+    marginBottom: 15,
+  },
+
+  forgot: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#8BD66D',
+  },
+
+  loginButton: {
+    marginBottom: 18,
+  },
+
+  securityNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(157, 190, 158, 0.2)',
+    paddingTop: 16,
+  },
+
+  note: {
+    flex: 1,
+    fontSize: 11,
+    lineHeight: 17,
+    color: '#B8C4B9',
+  },
+
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 7,
+    marginTop: 24,
+  },
+
+  footerText: {
+    fontSize: 9,
+    fontWeight: '600',
+    letterSpacing: 1.2,
+    color: '#A4B9A5',
+  },
 });
