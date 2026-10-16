@@ -177,7 +177,10 @@ export default function VisitorExploreScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={styles.container}
+      edges={['top', 'left', 'right']}
+    >
       <StatusBar barStyle="light-content" backgroundColor={FOREST.background} />
 
       <FlatList

@@ -1,14 +1,29 @@
+
 import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Pressable,
-  ScrollView,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
+
+import BackButton from '../components/BackButton';
+
+const COLORS = {
+  bg: '#0B1712',
+  surface: '#14251B',
+  surfaceLight: '#1C3023',
+  green: '#B8E986',
+  text: '#F2F6EE',
+  muted: '#9BAE9F',
+  border: '#2A4031',
+  error: '#F08C86',
+  errorBg: '#251B19',
+  errorBorder: '#713A38',
+};
 
 const profileFields = [
   { label: 'Staff ID', value: 'Not set up yet', icon: 'id-card-outline' },
@@ -19,86 +34,103 @@ const profileFields = [
 ];
 
 export default function BotanistProfileScreen({ navigation }) {
+  const handleLogout = () => {
+    navigation.replace('RoleSelect');
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <Pressable
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
+    <SafeAreaView
+      style={styles.container}
+      edges={['top', 'left', 'right', 'bottom']}
+    >
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={COLORS.bg}
+      />
+
+      {/* Back button */}
+      <View style={styles.topBar}>
+        <BackButton onPress={() => navigation.goBack()} />
+      </View>
+
+      {/* Profile heading */}
+      <View style={styles.header}>
+        <View style={styles.avatar}>
           <Ionicons
-            name="arrow-back"
+            name="person"
+            size={43}
+            color="#54B5F4"
+          />
+        </View>
+
+        <Text style={styles.title}>Botanist Profile</Text>
+
+        <Text style={styles.subtitle}>
+          Your Account Information
+        </Text>
+
+        <View style={styles.roleBadge}>
+          <Ionicons
+            name="leaf-outline"
             size={16}
-            color={colors.textPrimary}
+            color="#54B5F4"
           />
-          <Text style={styles.backText}>Back</Text>
-        </Pressable>
-
-        <View style={styles.header}>
-          <View style={styles.avatar}>
-            <Ionicons
-              name="person"
-              size={48}
-              color={colors.accentText}
-            />
-          </View>
-
-          <Text style={styles.title}>Botanist Profile</Text>
-          <Text style={styles.subtitle}>
-            Your Account Information
-          </Text>
-
-          <View style={styles.roleBadge}>
-            <Ionicons
-              name="leaf-outline"
-              size={16}
-              color={colors.accentText}
-            />
-            <Text style={styles.roleBadgeText}>BOTANIST</Text>
-          </View>
+          <Text style={styles.roleBadgeText}>BOTANIST</Text>
         </View>
+      </View>
 
-        <View style={styles.infoCard}>
-          {profileFields.map((field, index) => (
-            <View
-              key={field.label}
-              style={[
-                styles.infoRow,
-                index !== profileFields.length - 1 &&
-                  styles.infoRowBorder,
-              ]}
-            >
-              <View style={styles.fieldIcon}>
-                <Ionicons
-                  name={field.icon}
-                  size={23}
-                  color={colors.accentText}
-                />
-              </View>
-
-              <View style={styles.fieldContent}>
-                <Text style={styles.label}>{field.label}</Text>
-                <Text style={styles.value}>{field.value}</Text>
-              </View>
+      {/* Profile information */}
+      <View style={styles.infoCard}>
+        {profileFields.map((field, index) => (
+          <View
+            key={field.label}
+            style={[
+              styles.infoRow,
+              index !== profileFields.length - 1 &&
+                styles.infoRowBorder,
+            ]}
+          >
+            <View style={styles.fieldIcon}>
+              <Ionicons
+                name={field.icon}
+                size={23}
+                color="#54B5F4"
+              />
             </View>
-          ))}
-        </View>
 
-        <Pressable
-          style={styles.logoutButton}
-          onPress={() => navigation.replace('RoleSelect')}
-        >
-          <Ionicons
-            name="log-out-outline"
-            size={22}
-            color={colors.errorText}
-          />
-          <Text style={styles.logoutText}>Log Out</Text>
-        </Pressable>
-      </ScrollView>
+            <View style={styles.fieldContent}>
+              <Text style={styles.label}>{field.label}</Text>
+              <Text style={styles.value} numberOfLines={1}>
+                {field.value}
+              </Text>
+            </View>
+
+            <Ionicons
+              name="chevron-forward"
+              size={18}
+              color={COLORS.muted}
+            />
+          </View>
+        ))}
+      </View>
+
+      {/* Logout button */}
+      <Pressable
+        style={({ pressed }) => [
+          styles.logoutButton,
+          pressed && styles.logoutPressed,
+        ]}
+        onPress={handleLogout}
+        accessibilityRole="button"
+        accessibilityLabel="Log out"
+      >
+        <Ionicons
+          name="log-out-outline"
+          size={21}
+          color={COLORS.error}
+        />
+        <Text style={styles.logoutText}>Log Out</Text>
+      </Pressable>
     </SafeAreaView>
   );
 }
@@ -106,142 +138,141 @@ export default function BotanistProfileScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0B100E',
-  },
-
-  scrollContent: {
+    backgroundColor: COLORS.bg,
     paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 28,
+    paddingTop: 5,
+    paddingBottom: 12,
   },
 
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingVertical: 8,
-    marginBottom: 24,
-  },
-
-  backText: {
-    fontSize: 16,
-    color: colors.textPrimary,
-    marginLeft: 8,
+  topBar: {
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    marginBottom: 4,
   },
 
   header: {
     alignItems: 'center',
-    marginBottom: 28,
+    marginBottom: 22,
   },
 
   avatar: {
-    width: 104,
-    height: 104,
-    borderRadius: 52,
-    backgroundColor: '#193D2C',
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: '#06432F',
     borderWidth: 2,
-    borderColor: '#527C5B',
+    borderColor: '#397A56',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
 
   title: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: colors.textPrimary,
+    fontSize: 25,
+    fontWeight: '800',
+    color: COLORS.text,
     textAlign: 'center',
   },
 
   subtitle: {
-    fontSize: 15,
-    color: colors.textSecondary,
-    marginTop: 6,
+    fontSize: 14,
+    color: COLORS.muted,
+    marginTop: 5,
     textAlign: 'center',
   },
 
   roleBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginTop: 18,
+    justifyContent: 'center',
+    gap: 9,
+    marginTop: 14,
     paddingHorizontal: 18,
-    paddingVertical: 9,
+    paddingVertical: 8,
     borderRadius: 24,
-    backgroundColor: '#14291D',
+    backgroundColor: '#0D2C20',
     borderWidth: 1,
-    borderColor: '#3D7149',
+    borderColor: '#23734A',
   },
 
   roleBadgeText: {
-    color: colors.accentText,
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 1,
+    color: '#54B5F4',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 1.5,
   },
 
   infoCard: {
-    backgroundColor: '#171E1B',
-    borderRadius: 22,
+    backgroundColor: COLORS.surface,
+    borderRadius: 21,
     borderWidth: 1,
-    borderColor: '#303A35',
-    paddingHorizontal: 18,
-    paddingVertical: 4,
-    marginBottom: 24,
+    borderColor: COLORS.border,
+    paddingHorizontal: 15,
+    paddingVertical: 3,
+    marginBottom: 18,
   },
 
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
-    gap: 16,
+    paddingVertical: 11,
+    gap: 13,
+    minHeight: 76,
   },
 
   infoRowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: '#303A35',
+    borderBottomColor: COLORS.border,
   },
 
   fieldIcon: {
-    width: 54,
-    height: 54,
-    borderRadius: 15,
-    backgroundColor: '#202D25',
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: COLORS.surfaceLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   fieldContent: {
     flex: 1,
+    minWidth: 0,
   },
 
   label: {
-    fontSize: 13,
-    color: colors.textMuted,
-    marginBottom: 6,
+    fontSize: 12,
+    color: COLORS.muted,
+    marginBottom: 5,
   },
 
   value: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
   },
 
   logoutButton: {
+    minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: colors.errorText,
-    borderRadius: 16,
-    paddingVertical: 16,
+    borderColor: COLORS.errorBorder,
+    backgroundColor: COLORS.errorBg,
+    borderRadius: 15,
+    paddingVertical: 12,
     gap: 10,
-    marginTop: 4,
+    marginTop: 0,
+  },
+
+  logoutPressed: {
+    opacity: 0.7,
   },
 
   logoutText: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.errorText,
+    fontSize: 15,
+    fontWeight: '800',
+    color: COLORS.error,
   },
 });

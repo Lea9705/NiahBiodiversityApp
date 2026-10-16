@@ -15,9 +15,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
 import StyledInput from '../components/StyledInput';
 import PrimaryButton from '../components/PrimaryButton';
+import BackButton from '../components/BackButton';
 
 export default function BotanistLoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -41,8 +41,7 @@ export default function BotanistLoginScreen({ navigation }) {
     if (Object.keys(newErrors).length > 0) return;
 
     // Keep the existing navigation behaviour.
-    // Replace this with the real backend authentication API
-    // when the endpoint is ready.
+    // Replace with the real backend authentication API when ready.
     navigation.navigate('BotanistHome');
   };
 
@@ -56,18 +55,10 @@ export default function BotanistLoginScreen({ navigation }) {
 
       <View style={styles.overlay}>
         <SafeAreaView style={styles.safeArea}>
-          <TouchableOpacity
-            style={styles.back}
-            onPress={() => navigation.goBack()}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name="arrow-back"
-              size={20}
-              color="#E2E9E2"
-            />
-            <Text style={styles.backText}>Back</Text>
-          </TouchableOpacity>
+          {/* Shared BackButton used by the other screens */}
+          <View style={styles.backContainer}>
+            <BackButton onPress={() => navigation.goBack()} />
+          </View>
 
           <KeyboardAvoidingView
             style={styles.keyboardArea}
@@ -88,8 +79,6 @@ export default function BotanistLoginScreen({ navigation }) {
                   />
                 </View>
 
-                <Text style={styles.title}>Botanist Login</Text>
-
                 <Text style={styles.subtitle}>
                   Field Staff and Conservation Team
                 </Text>
@@ -100,7 +89,9 @@ export default function BotanistLoginScreen({ navigation }) {
                     size={15}
                     color="#8BD66D"
                   />
-                  <Text style={styles.roleBadgeText}>BOTANIST ACCESS</Text>
+                  <Text style={styles.roleBadgeText}>
+                    BOTANIST ACCESS
+                  </Text>
                 </View>
               </View>
 
@@ -119,6 +110,7 @@ export default function BotanistLoginScreen({ navigation }) {
                     value={email}
                     onChangeText={(value) => {
                       setEmail(value);
+
                       if (errors.email) {
                         setErrors((previous) => ({
                           ...previous,
@@ -139,6 +131,7 @@ export default function BotanistLoginScreen({ navigation }) {
                     value={password}
                     onChangeText={(value) => {
                       setPassword(value);
+
                       if (errors.password) {
                         setErrors((previous) => ({
                           ...previous,
@@ -158,12 +151,19 @@ export default function BotanistLoginScreen({ navigation }) {
                     activeOpacity={0.7}
                   >
                     <Ionicons
-                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                      name={
+                        showPassword
+                          ? 'eye-off-outline'
+                          : 'eye-outline'
+                      }
                       size={19}
                       color="#A9B8AB"
                     />
+
                     <Text style={styles.passwordToggleText}>
-                      {showPassword ? 'Hide password' : 'Show password'}
+                      {showPassword
+                        ? 'Hide password'
+                        : 'Show password'}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -209,6 +209,7 @@ export default function BotanistLoginScreen({ navigation }) {
                   size={14}
                   color="#91B79A"
                 />
+
                 <Text style={styles.footerText}>
                   DISCOVER · DOCUMENT · CONSERVE
                 </Text>
@@ -236,20 +237,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  back: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  backContainer: {
     alignSelf: 'flex-start',
-    gap: 7,
-    paddingHorizontal: 22,
-    paddingTop: 8,
-    paddingBottom: 6,
+    marginLeft: 22,
+    marginTop: 8,
     zIndex: 2,
-  },
-
-  backText: {
-    color: '#E2E9E2',
-    fontSize: 14,
   },
 
   keyboardArea: {
@@ -300,9 +292,9 @@ const styles = StyleSheet.create({
   roleBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
-    paddingHorizontal: 15,
-    paddingVertical: 8,
+    gap: 8,
+    paddingHorizontal: 19,
+    paddingVertical: 10,
     borderRadius: 24,
     borderWidth: 1,
     borderColor: 'rgba(92, 174, 103, 0.55)',
@@ -311,7 +303,7 @@ const styles = StyleSheet.create({
   },
 
   roleBadgeText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
     letterSpacing: 1.2,
     color: '#A7D99A',

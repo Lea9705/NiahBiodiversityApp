@@ -138,7 +138,10 @@ export default function VisitorMapScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={styles.container}
+      edges={['top', 'left', 'right']}
+    >
       <StatusBar
         barStyle="light-content"
         backgroundColor={FOREST.background}
@@ -296,6 +299,7 @@ export default function VisitorMapScreen({ navigation }) {
       )}
 
       <BottomNav
+        variant="default"
         activeIndex={1}
         items={[
           { icon: 'home-outline', label: 'Home' },
