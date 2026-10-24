@@ -166,7 +166,7 @@ export default function VisitorExploreScreen({ navigation }) {
             </View>
 
             <Ionicons
-              name="arrow-up-forward"
+              name="arrow-forward"
               size={15}
               color={FOREST.green}
             />

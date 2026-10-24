@@ -18,9 +18,11 @@ import { Ionicons } from '@expo/vector-icons';
 import StyledInput from '../components/StyledInput';
 import PrimaryButton from '../components/PrimaryButton';
 import BackButton from '../components/BackButton';
+import { useUser, nameFromEmail } from '../context/UserContext';
 
 export default function BotanistLoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
+  const { setUserName } = useUser();
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
@@ -42,6 +44,7 @@ export default function BotanistLoginScreen({ navigation }) {
 
     // Keep the existing navigation behaviour.
     // Replace with the real backend authentication API when ready.
+    setUserName(nameFromEmail(email));
     navigation.navigate('BotanistHome');
   };
 

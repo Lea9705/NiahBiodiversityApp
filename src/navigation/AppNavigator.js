@@ -14,7 +14,7 @@ import BotanistProfileScreen from '../screens/BotanistProfileScreen';
 import { colors } from '../theme/colors';
 import ScanQRScreen from '../screens/ScanQRScreen';
 import ActivitiesScreen from '../screens/ActivitiesScreen';
-import RecordsScreen from '../screens/RecordsScreen';
+import ExploreScreen from '../screens/ExploreScreen';
 
 const Stack = createStackNavigator();
 
@@ -30,7 +30,11 @@ export default function AppNavigator() {
       >
         <Stack.Screen name="RoleSelect" component={RoleSelectScreen} />
         <Stack.Screen name="BotanistLogin" component={BotanistLoginScreen} />
-        <Stack.Screen name="BotanistHome" component={BotanistHomeScreen} />
+        <Stack.Screen
+          name="BotanistHome"
+          component={BotanistHomeScreen}
+          options={{ gestureEnabled: false, animationEnabled: false }}
+        />
         <Stack.Screen name="VisitorHome" component={VisitorHomeScreen} />
         <Stack.Screen name="VisitorExplore" component={VisitorExploreScreen} />
         <Stack.Screen name="VisitorMap" component={VisitorMapScreen} />
@@ -38,10 +42,20 @@ export default function AppNavigator() {
         <Stack.Screen name="PlantRecordSummary" component={PlantRecordSummaryScreen} />
         <Stack.Screen name="PlantDetail" component={PlantDetailScreen} />
         <Stack.Screen name="BotanistProfile" component={BotanistProfileScreen} />
-        <Stack.Screen name="ScanQR" component={ScanQRScreen} />
+        <Stack.Screen
+          name="ScanQR"
+          component={ScanQRScreen}
+          options={({ route }) => {
+            const visitor = route.params?.mode === 'visitor';
+            return { gestureEnabled: visitor, animationEnabled: visitor };
+          }}
+        />
         <Stack.Screen name="Activities" component={ActivitiesScreen} />
-        <Stack.Screen name="Records" component={RecordsScreen} />
-
+        <Stack.Screen
+          name="Explore"
+          component={ExploreScreen}
+          options={{ gestureEnabled: false, animationEnabled: false }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

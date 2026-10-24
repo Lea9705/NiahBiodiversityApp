@@ -14,6 +14,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRecords } from '../context/RecordsContext';
+import BotanistBottomNav from '../components/BotanistBottomNav';
 
 const API_URL = 'http://52.62.125.146/api/plants';
 
@@ -158,6 +159,10 @@ export default function ScanQRScreen({ navigation, route }) {
   const isFocused = useIsFocused();
   const { records, loading: recordsLoading } = useRecords();
   const isVisitor = route?.params?.mode === 'visitor';
+
+  // Botanists get the bottom bar and no back button. Visitors keep theirs.
+  const safeEdges = isVisitor ? undefined : ['top', 'left', 'right'];
+  const bottomNav = isVisitor ? null : <BotanistBottomNav active="scan" />;
 
   useEffect(() => {
     if (isFocused) {
@@ -326,46 +331,54 @@ export default function ScanQRScreen({ navigation, route }) {
 
   if (!permission) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.centerBox}>
-          <ActivityIndicator color={DARK.green} />
-          <Text style={styles.statusText}>Checking camera permission...</Text>
-        </View>
-      </SafeAreaView>
+      <View style={styles.container}>
+        <SafeAreaView style={styles.flex} edges={safeEdges}>
+          <View style={styles.centerBox}>
+            <ActivityIndicator color={DARK.green} />
+            <Text style={styles.statusText}>Checking camera permission...</Text>
+          </View>
+        </SafeAreaView>
+        {bottomNav}
+      </View>
     );
   }
 
   if (!permission.granted) {
     return (
-      <SafeAreaView style={styles.container}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="return-up-back" size={21} color={DARK.green} />
-        </TouchableOpacity>
+      <View style={styles.container}>
+        <SafeAreaView style={styles.flex} edges={safeEdges}>
+          {isVisitor && (
+            <TouchableOpacity
+              style={[styles.backButton, styles.backSpaced]}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="return-up-back" size={21} color={DARK.green} />
+            </TouchableOpacity>
+          )}
 
-        <View style={styles.centerBox}>
-          <Ionicons name="camera-outline" size={36} color={DARK.green} />
-          <Text style={styles.permissionText}>
-            {permission.canAskAgain
-              ? 'Camera access is needed to scan plant tags.'
-              : 'Camera access is turned off. Open Settings and allow camera access, then return here.'}
-          </Text>
-          <TouchableOpacity
-            style={styles.permissionButton}
-            onPress={
-              permission.canAskAgain
-                ? requestPermission
-                : () => Linking.openSettings()
-            }
-          >
-            <Text style={styles.permissionButtonText}>
-              {permission.canAskAgain ? 'Allow camera' : 'Open Settings'}
+          <View style={styles.centerBox}>
+            <Ionicons name="camera-outline" size={36} color={DARK.green} />
+            <Text style={styles.permissionText}>
+              {permission.canAskAgain
+                ? 'Camera access is needed to scan plant tags.'
+                : 'Camera access is turned off. Open Settings and allow camera access, then return here.'}
             </Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+            <TouchableOpacity
+              style={styles.permissionButton}
+              onPress={
+                permission.canAskAgain
+                  ? requestPermission
+                  : () => Linking.openSettings()
+              }
+            >
+              <Text style={styles.permissionButtonText}>
+                {permission.canAskAgain ? 'Allow camera' : 'Open Settings'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+        {bottomNav}
+      </View>
     );
   }
 
@@ -397,15 +410,20 @@ export default function ScanQRScreen({ navigation, route }) {
         />
       )}
 
-      <SafeAreaView style={styles.overlay}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="return-up-back" size={21} color={DARK.green} />
-        </TouchableOpacity>
+      <SafeAreaView
+        style={[styles.overlay, !isVisitor && styles.overlayCentered]}
+        edges={safeEdges}
+      >
+        {isVisitor && (
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="return-up-back" size={21} color={DARK.green} />
+          </TouchableOpacity>
+        )}
 
-        <View style={styles.frameWrap}>
+        <View style={[styles.frameWrap, !isVisitor && styles.frameWrapCentered]}>
           <View style={styles.frame}>
             <View style={[styles.corner, styles.topLeft]} />
             <View style={[styles.corner, styles.topRight]} />
@@ -426,17 +444,21 @@ export default function ScanQRScreen({ navigation, route }) {
           </Text>
         </View>
       </SafeAreaView>
+
+      {bottomNav}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: DARK.bg },
+  flex: { flex: 1 },
   overlay: {
     flex: 1,
     justifyContent: 'space-between',
     padding: 16,
   },
+  overlayCentered: { justifyContent: 'center' },
   backButton: {
     width: 44,
     height: 44,
@@ -447,7 +469,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  backSpaced: { margin: 16 },
   frameWrap: { alignItems: 'center', marginBottom: 75 },
+  frameWrapCentered: { marginBottom: 0 },
   frame: { width: 240, height: 240, borderRadius: 18, position: 'relative' },
   corner: {
     position: 'absolute',
