@@ -14,6 +14,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRecords } from '../context/RecordsContext';
+import { authFetch } from '../utils/session';
 import BotanistBottomNav from '../components/BotanistBottomNav';
 
 const API_URL = 'http://52.62.125.146/api/plants';
@@ -242,7 +243,7 @@ export default function ScanQRScreen({ navigation, route }) {
       }
 
       // Search the API when the phone has no matching local record.
-      const response = await fetch(API_URL);
+      const response = await authFetch(API_URL);
 
       if (!response.ok) {
         throw new Error(`API returned ${response.status}`);

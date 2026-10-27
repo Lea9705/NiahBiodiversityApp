@@ -1,8 +1,8 @@
-// Botanist login only - no self-signup.
+// Botanist login. The email and password are checked by the server.
+// A wrong email or password shows an error message.
 // Styled to match the Niah Biodiversity botanical theme.
 
 import React, { useState } from 'react';
-import * as SecureStore from 'expo-secure-store';
 import {
   View,
   Text,
@@ -19,79 +19,53 @@ import { Ionicons } from '@expo/vector-icons';
 import StyledInput from '../components/StyledInput';
 import PrimaryButton from '../components/PrimaryButton';
 import BackButton from '../components/BackButton';
-import { useUser, nameFromEmail } from '../context/UserContext';
+import { useUser } from '../context/UserContext';
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function BotanistLoginScreen({ navigation }) {
+  const { login } = useUser();
+
   const [email, setEmail] = useState('');
-  const { setUserName } = useUser();
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
+  const [loginError, setLoginError] = useState('');
+  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const handleLogin = async () => {
+    if (loading) return;
+
+    const trimmedEmail = email.trim();
     const newErrors = {};
 
-    if (!email.trim()) newErrors.email = '*Please enter your staff email';
-    if (!password) newErrors.password = '*Please enter your password';
+    if (!trimmedEmail) {
+      newErrors.email = '*Please enter your staff email';
+    } else if (!EMAIL_PATTERN.test(trimmedEmail)) {
+      newErrors.email = '*Please enter a valid email address';
+    }
+
+    if (!password) {
+      newErrors.password = '*Please enter your password';
+    }
 
     setErrors(newErrors);
+    setLoginError('');
+
     if (Object.keys(newErrors).length > 0) return;
 
-    setIsLoggingIn(true);
+    setLoading(true);
 
     try {
-      const response = await fetch('http://52.62.125.146/api/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-        body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-          password,
-        }),
+      await login(trimmedEmail, password);
+
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'BotanistHome' }],
       });
-
-      const responseText = await response.text();
-      let data;
-
-      try {
-        data = responseText ? JSON.parse(responseText) : {};
-      } catch {
-        throw new Error(`Server returned an invalid response (HTTP ${response.status}).`);
-      }
-
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 400) {
-          throw new Error(
-            'The email or password is incorrect. Please try again.'
-          );
-        }
-
-        throw new Error(
-          data.message ||
-          data.error ||
-          `Unable to log in (HTTP ${response.status}). Please try again.`
-        );
-      }
-
-      if (!data.token || !data.user || data.user.id == null) {
-        throw new Error('Login response is missing the token or user ID.');
-      }
-
-      await SecureStore.setItemAsync('authToken', data.token);
-      await SecureStore.setItemAsync('authUser', JSON.stringify(data.user));
-
-      setUserName(data.user.name || nameFromEmail(email));
-      navigation.navigate('BotanistHome');
     } catch (error) {
-      setErrors((previous) => ({
-        ...previous,
-        general: error.message || 'Unable to log in. Please try again.',
-      }));
-    } finally {
-      setIsLoggingIn(false);
+      setLoginError(error.message || 'Unable to log in. Please try again.');
+      setLoading(false);
     }
   };
 
@@ -161,7 +135,9 @@ export default function BotanistLoginScreen({ navigation }) {
                     onChangeText={(value) => {
                       setEmail(value);
 
-                      if (errors.email || errors.general) {
+                      if (loginError) setLoginError('');
+
+                      if (errors.email) {
                         setErrors((previous) => ({
                           ...previous,
                           email: '',
@@ -169,7 +145,10 @@ export default function BotanistLoginScreen({ navigation }) {
                       }
                     }}
                     autoCapitalize="none"
+                    autoCorrect={false}
                     keyboardType="email-address"
+                    returnKeyType="next"
+                    editable={!loading}
                     error={errors.email}
                   />
                 </View>
@@ -182,7 +161,9 @@ export default function BotanistLoginScreen({ navigation }) {
                     onChangeText={(value) => {
                       setPassword(value);
 
-                      if (errors.password || errors.general) {
+                      if (loginError) setLoginError('');
+
+                      if (errors.password) {
                         setErrors((previous) => ({
                           ...previous,
                           password: '',
@@ -190,6 +171,11 @@ export default function BotanistLoginScreen({ navigation }) {
                       }
                     }}
                     secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    returnKeyType="go"
+                    onSubmitEditing={handleLogin}
+                    editable={!loading}
                     error={errors.password}
                   />
 
@@ -232,24 +218,25 @@ export default function BotanistLoginScreen({ navigation }) {
                   </Text>
                 </TouchableOpacity>
 
-                {errors.general ? (
-                  <View style={styles.errorBox}>
+                {/* Error from the server (wrong email or password, etc.) */}
+                {loginError ? (
+                  <View style={styles.errorBanner}>
                     <Ionicons
                       name="alert-circle-outline"
-                      size={20}
-                      color="#FF8A80"
+                      size={18}
+                      color="#F08C86"
                     />
-                    <Text style={styles.errorText}>
-                      {errors.general}
-                    </Text>
+                    <Text style={styles.errorBannerText}>{loginError}</Text>
                   </View>
                 ) : null}
 
                 <PrimaryButton
-                  title={isLoggingIn ? "Logging in..." : "Log in"}
+                  title={loading ? 'Logging in...' : 'Log in'}
                   onPress={handleLogin}
-                  disabled={isLoggingIn}
-                  style={styles.loginButton}
+                  style={[
+                    styles.loginButton,
+                    loading && styles.loginButtonLoading,
+                  ]}
                 />
 
                 <View style={styles.securityNote}>
@@ -287,26 +274,6 @@ export default function BotanistLoginScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-
-  errorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#3B2322',
-    borderColor: '#F08C86',
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 12,
-    marginTop: 12,
-    marginBottom: 8,
-    gap: 8,
-  },
-
-  errorText: {
-    color: '#FF8A80',
-    fontSize: 14,
-    flex: 1,
-  },
-
   container: {
     flex: 1,
     backgroundColor: '#101711',
@@ -355,14 +322,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 17,
-  },
-
-  title: {
-    fontSize: 27,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-    color: '#F5F6F0',
-    textAlign: 'center',
   },
 
   subtitle: {
@@ -445,8 +404,31 @@ const styles = StyleSheet.create({
     color: '#8BD66D',
   },
 
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 9,
+    padding: 12,
+    marginBottom: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#713A38',
+    backgroundColor: '#251B19',
+  },
+
+  errorBannerText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#F5B8B3',
+  },
+
   loginButton: {
     marginBottom: 18,
+  },
+
+  loginButtonLoading: {
+    opacity: 0.6,
   },
 
   securityNote: {

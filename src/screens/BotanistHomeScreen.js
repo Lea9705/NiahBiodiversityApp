@@ -18,6 +18,7 @@ import OutlineButton from '../components/OutlineButton';
 import BotanistHeader from '../components/BotanistHeader';
 import BotanistBottomNav from '../components/BotanistBottomNav';
 import { useRecords } from '../context/RecordsContext';
+import { authFetch } from '../utils/session';
 
 const COLORS = {
   bg: '#0B1712',
@@ -57,7 +58,7 @@ export default function BotanistHomeScreen({ navigation }) {
             throw new Error('Your login session has no user ID. Please log in again.');
           }
 
-          const response = await fetch('http://52.62.125.146/api/plants', {
+          const response = await authFetch('http://52.62.125.146/api/plants', {
             headers: {
               Authorization: `Bearer ${token}`,
               Accept: 'application/json',

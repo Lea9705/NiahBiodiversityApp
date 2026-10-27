@@ -11,6 +11,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import BackButton from '../components/BackButton';
+import { useUser } from '../context/UserContext';
+
+function buildProfileFields(user) {
+  return [
+    { label: 'Staff ID', value: user?.id || 'Not set up yet', icon: 'id-card-outline' },
+    { label: 'Email', value: user?.email || 'Not set up yet', icon: 'mail-outline' },
+    { label: 'Phone Number', value: user?.phone || 'Not added', icon: 'call-outline' },
+    { label: 'Unit', value: user?.unit || 'Not assigned', icon: 'people-outline' },
+    { label: 'Department', value: user?.department || 'Not assigned', icon: 'business-outline' },
+  ];
+}
 
 const COLORS = {
   bg: '#0B1712',
@@ -34,8 +45,11 @@ const profileFields = [
 ];
 
 export default function BotanistProfileScreen({ navigation }) {
+  const { user, logout } = useUser();
+  const profileFields = buildProfileFields(user);
   const handleLogout = () => {
-    navigation.replace('RoleSelect');
+    logout();
+    navigation.reset({ index: 0, routes: [{ name: 'RoleSelect' }] });
   };
 
   return (

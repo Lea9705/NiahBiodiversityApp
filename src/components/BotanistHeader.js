@@ -18,7 +18,7 @@ const COLORS = {
 
 export default function BotanistHeader() {
   const navigation = useNavigation();
-  const { userName, setUserName } = useUser();
+  const { userName, logout } = useUser();
 
   const handleLogout = () => {
     Alert.alert(
@@ -30,7 +30,7 @@ export default function BotanistHeader() {
           text: 'Log out',
           style: 'destructive',
           onPress: () => {
-            setUserName('');
+            logout();
             navigation.reset({
               index: 0,
               routes: [{ name: 'RoleSelect' }],

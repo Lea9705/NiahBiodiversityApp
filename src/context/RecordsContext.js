@@ -6,6 +6,8 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import NetInfo from '@react-native-community/netinfo';
 import { getDatabase } from '../db/database';
 import { syncRecordToCloud } from '../utils/syncRecord';
+import { useUser } from './UserContext';
+import { authFetch, getUser } from '../utils/session';
 import * as SecureStore from 'expo-secure-store';
 
 const RecordsContext = createContext(null);
@@ -19,6 +21,7 @@ export function RecordsProvider({ children }) {
   const syncingRef = useRef(false);
   const recordsRef = useRef([]);
   const retryRef = useRef({}); // record id -> { fails, nextTry }
+  const { token } = useUser();
 
   useEffect(() => {
     recordsRef.current = records;
@@ -48,12 +51,12 @@ export function RecordsProvider({ children }) {
 
   // Download approved records whenever internet is available.
   useEffect(() => {
-    if (!isOnline || loading) return;
+    if (!isOnline || loading || !token) return;
 
     syncApprovedRecords().catch((error) => {
       console.log('Approved records sync failed:', error.message);
     });
-  }, [isOnline, loading]);
+  }, [isOnline, loading, token]);
 
   const updateRecordStatus = async (id, status) => {
   const db = await getDatabase();
@@ -199,7 +202,7 @@ const syncApprovedRecords = async () => {
     throw new Error('You must log in before fetching approved plant records.');
   }
 
-  const response = await fetch('http://52.62.125.146/api/plants', {
+  const response = await authFetch('http://52.62.125.146/api/plants', {
     headers: {
       Authorization: `Bearer ${token}`,
       Accept: 'application/json',
@@ -291,7 +294,7 @@ const syncApprovedRecords = async () => {
   // re-sent every 5 seconds forever.
   useEffect(() => {
     const intervalId = setInterval(async () => {
-      if (!isOnlineRef.current || syncingRef.current) return;
+      if (!isOnlineRef.current || syncingRef.current || !getUser()) return;
 
       const now = Date.now();
       const due = recordsRef.current.filter((r) => {

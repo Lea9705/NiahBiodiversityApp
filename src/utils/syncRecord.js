@@ -1,6 +1,6 @@
-import * as SecureStore from 'expo-secure-store';
 // Shared logic for submitting a single local record to the cloud.
 import { uploadAllPhotos } from './uploadPhoto';
+import { authFetch, getUser } from './session';
 
 const API_URL = 'http://52.62.125.146/api/plants';
 
@@ -23,22 +23,6 @@ export async function syncRecordToCloud(record) {
     uploadedPhotoCache[record.id] = photoUrls;
   }
 
-  const token = await SecureStore.getItemAsync('authToken');
-  const userJson = await SecureStore.getItemAsync('authUser');
-  if (!token || !userJson) {
-    throw new Error('You must log in before syncing plant records.');
-  }
-
-  let user;
-  try {
-    user = JSON.parse(userJson);
-  } catch {
-    throw new Error('Saved login details are invalid. Please log in again.');
-  }
-  if (user?.id == null) {
-    throw new Error('Your login session has no user ID. Please log in again.');
-  }
-
   const body = {
     scientificName: record.scientificName,
     commonName: record.commonName,
@@ -51,16 +35,13 @@ export async function syncRecordToCloud(record) {
     imageUrl: photoUrls[0] || null,
     // The backend reads this one. It saves every photo link.
     imageUrls: photoUrls,
-    submitted_by: user.id,
+    // The botanist who is logged in, so the web shows who submitted it.
+    submitted_by: getUser()?.id ?? null,
   };
 
-  const response = await fetch(API_URL, {
+  const response = await authFetch(API_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
 

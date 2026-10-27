@@ -15,6 +15,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import * as SecureStore from 'expo-secure-store';
 
 import BackButton from '../components/BackButton';
+import { authFetch } from '../utils/session';
 
 const COLORS = {
   bg: '#0B1712',
@@ -71,7 +72,7 @@ export default function ActivitiesScreen({ navigation }) {
         throw new Error('Your login session has no user ID. Please log in again.');
       }
 
-      const response = await fetch(
+      const response = await authFetch(
         'http://52.62.125.146/api/plants',
         {
           method: 'GET',
