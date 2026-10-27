@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import * as SecureStore from 'expo-secure-store';
 
 import BackButton from '../components/BackButton';
 
@@ -44,8 +45,41 @@ export default function ActivitiesScreen({ navigation }) {
       setLoading(true);
       setLoadError(false);
 
+      const token = await SecureStore.getItemAsync('authToken');
+      const userJson = await SecureStore.getItemAsync('authUser');
+
+      if (!token) {
+        throw new Error(
+          'Your login session was not found. Please log in again.'
+        );
+      }
+
+      if (!userJson) {
+        throw new Error(
+          'Your user session was not found. Please log in again.'
+        );
+      }
+
+      let currentUser;
+      try {
+        currentUser = JSON.parse(userJson);
+      } catch {
+        throw new Error('Your saved user details are invalid. Please log in again.');
+      }
+
+      if (currentUser?.id == null) {
+        throw new Error('Your login session has no user ID. Please log in again.');
+      }
+
       const response = await fetch(
-        'http://52.62.125.146/api/plants'
+        'http://52.62.125.146/api/plants',
+        {
+          method: 'GET',
+          headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
 
       if (!response.ok) {
@@ -58,7 +92,35 @@ export default function ActivitiesScreen({ navigation }) {
         throw new Error('Unexpected plant records response');
       }
 
-      const formattedActivities = data.map((plant) => {
+      // The API may expose the owner ID under different naming conventions.
+      // Only include records whose owner matches the logged-in botanist.
+      const getOwnerId = (plant) => {
+        const owner =
+          plant.submitted_by ??
+          plant.submittedBy ??
+          plant.submitted_by_id ??
+          plant.submittedById ??
+          plant.user_id ??
+          plant.userId ??
+          plant.botanist_id ??
+          plant.botanistId ??
+          plant.created_by ??
+          plant.createdBy ??
+          plant.user?.id ??
+          plant.botanist?.id;
+        if (owner && typeof owner === 'object') {
+          return owner.id ?? owner.user_id ?? owner.userId ?? null;
+        }
+        return owner ?? null;
+      };
+
+      const currentUserId = String(currentUser.id);
+      const myPlants = data.filter((plant) => {
+        const ownerId = getOwnerId(plant);
+        return ownerId != null && String(ownerId) === currentUserId;
+      });
+
+      const formattedActivities = myPlants.map((plant) => {
         const status = plant.plant_status || 'Pending';
 
         let detail = 'Submitted · Waiting for approval';

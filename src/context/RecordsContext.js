@@ -6,6 +6,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import NetInfo from '@react-native-community/netinfo';
 import { getDatabase } from '../db/database';
 import { syncRecordToCloud } from '../utils/syncRecord';
+import * as SecureStore from 'expo-secure-store';
 
 const RecordsContext = createContext(null);
 
@@ -193,7 +194,17 @@ const updateRecordServerId = async (id, serverId) => {
 const syncApprovedRecords = async () => {
   const db = await getDatabase();
 
-  const response = await fetch('http://52.62.125.146/api/plants');
+  const token = await SecureStore.getItemAsync('authToken');
+  if (!token) {
+    throw new Error('You must log in before fetching approved plant records.');
+  }
+
+  const response = await fetch('http://52.62.125.146/api/plants', {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
+    },
+  });
 
   if (!response.ok) {
     throw new Error(`Failed to fetch plants: ${response.status}`);

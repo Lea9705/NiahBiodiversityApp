@@ -2,6 +2,7 @@
 // Styled to match the Niah Biodiversity botanical theme.
 
 import React, { useState } from 'react';
+import * as SecureStore from 'expo-secure-store';
 import {
   View,
   Text,
@@ -26,26 +27,72 @@ export default function BotanistLoginScreen({ navigation }) {
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     const newErrors = {};
 
-    if (!email.trim()) {
-      newErrors.email = '*Please enter your staff email';
-    }
-
-    if (!password) {
-      newErrors.password = '*Please enter your password';
-    }
+    if (!email.trim()) newErrors.email = '*Please enter your staff email';
+    if (!password) newErrors.password = '*Please enter your password';
 
     setErrors(newErrors);
-
     if (Object.keys(newErrors).length > 0) return;
 
-    // Keep the existing navigation behaviour.
-    // Replace with the real backend authentication API when ready.
-    setUserName(nameFromEmail(email));
-    navigation.navigate('BotanistHome');
+    setIsLoggingIn(true);
+
+    try {
+      const response = await fetch('http://52.62.125.146/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+        }),
+      });
+
+      const responseText = await response.text();
+      let data;
+
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        throw new Error(`Server returned an invalid response (HTTP ${response.status}).`);
+      }
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 400) {
+          throw new Error(
+            'The email or password is incorrect. Please try again.'
+          );
+        }
+
+        throw new Error(
+          data.message ||
+          data.error ||
+          `Unable to log in (HTTP ${response.status}). Please try again.`
+        );
+      }
+
+      if (!data.token || !data.user || data.user.id == null) {
+        throw new Error('Login response is missing the token or user ID.');
+      }
+
+      await SecureStore.setItemAsync('authToken', data.token);
+      await SecureStore.setItemAsync('authUser', JSON.stringify(data.user));
+
+      setUserName(data.user.name || nameFromEmail(email));
+      navigation.navigate('BotanistHome');
+    } catch (error) {
+      setErrors((previous) => ({
+        ...previous,
+        general: error.message || 'Unable to log in. Please try again.',
+      }));
+    } finally {
+      setIsLoggingIn(false);
+    }
   };
 
   return (
@@ -114,7 +161,7 @@ export default function BotanistLoginScreen({ navigation }) {
                     onChangeText={(value) => {
                       setEmail(value);
 
-                      if (errors.email) {
+                      if (errors.email || errors.general) {
                         setErrors((previous) => ({
                           ...previous,
                           email: '',
@@ -135,7 +182,7 @@ export default function BotanistLoginScreen({ navigation }) {
                     onChangeText={(value) => {
                       setPassword(value);
 
-                      if (errors.password) {
+                      if (errors.password || errors.general) {
                         setErrors((previous) => ({
                           ...previous,
                           password: '',
@@ -185,9 +232,23 @@ export default function BotanistLoginScreen({ navigation }) {
                   </Text>
                 </TouchableOpacity>
 
+                {errors.general ? (
+                  <View style={styles.errorBox}>
+                    <Ionicons
+                      name="alert-circle-outline"
+                      size={20}
+                      color="#FF8A80"
+                    />
+                    <Text style={styles.errorText}>
+                      {errors.general}
+                    </Text>
+                  </View>
+                ) : null}
+
                 <PrimaryButton
-                  title="Log in"
+                  title={isLoggingIn ? "Logging in..." : "Log in"}
                   onPress={handleLogin}
+                  disabled={isLoggingIn}
                   style={styles.loginButton}
                 />
 
@@ -226,6 +287,26 @@ export default function BotanistLoginScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#3B2322',
+    borderColor: '#F08C86',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 12,
+    marginBottom: 8,
+    gap: 8,
+  },
+
+  errorText: {
+    color: '#FF8A80',
+    fontSize: 14,
+    flex: 1,
+  },
+
   container: {
     flex: 1,
     backgroundColor: '#101711',
