@@ -1,6 +1,7 @@
 // Botanist home: greeting header, connection status, New plant record,
 // and My Activities.
 import React, { useState, useCallback } from 'react';
+import * as SecureStore from 'expo-secure-store';
 import {
   View,
   Text,
@@ -42,27 +43,58 @@ export default function BotanistHomeScreen({ navigation }) {
 
       const fetchPendingApprovals = async () => {
         try {
-          const response = await fetch('http://52.62.125.146/api/plants');
+          const token = await SecureStore.getItemAsync('authToken');
+          const userJson = await SecureStore.getItemAsync('authUser');
+
+          if (!token || !userJson) {
+            throw new Error('You are not signed in. Please log in again.');
+          }
+
+          const currentUser = JSON.parse(userJson);
+          const userId = currentUser?.id;
+
+          if (userId === undefined || userId === null) {
+            throw new Error('Your login session has no user ID. Please log in again.');
+          }
+
+          const response = await fetch('http://52.62.125.146/api/plants', {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+            },
+          });
+
+          const responseText = await response.text();
+          let data;
+
+          try {
+            data = responseText ? JSON.parse(responseText) : [];
+          } catch {
+            throw new Error(`The server returned an invalid response (HTTP ${response.status}).`);
+          }
 
           if (!response.ok) {
-            throw new Error('Failed to fetch plant records');
+            throw new Error(data?.error || `Request failed (HTTP ${response.status}).`);
           }
 
-          const data = await response.json();
-          const plants = Array.isArray(data) ? data : [];
-
-          const count = plants.filter(
-            (plant) =>
-              String(plant.plant_status || 'Pending')
-                .trim()
-                .toLowerCase() === 'pending'
-          ).length;
-
-          if (active) {
-            setPendingApprovalCount(count);
+          if (!Array.isArray(data)) {
+            throw new Error('The plants API did not return a list.');
           }
+
+          // Only count records submitted by this logged-in botanist.
+          const count = data.filter((plant) => {
+            const belongsToCurrentUser =
+              String(plant.submitted_by) === String(userId);
+            const isPending =
+              String(plant.plant_status || '').trim().toLowerCase() === 'pending';
+
+            return belongsToCurrentUser && isPending;
+          }).length;
+
+          if (active) setPendingApprovalCount(count);
         } catch (error) {
-          console.error('Failed to fetch pending approvals:', error);
+          console.error('Failed to fetch my pending approvals:', error.message);
+          // Keep the previous count rather than incorrectly replacing it with 0.
         }
       };
 
