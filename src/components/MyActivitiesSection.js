@@ -1,6 +1,6 @@
 // My Activities, shown directly on the Home screen: the botanist's own
 // plant submissions and their approval status (Pending, Approved, Rejected).
-import React, { useState, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useCallback, useRef, useMemo, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,10 @@ const PLANTS_URL = 'http://52.62.125.146/api/plants';
 
 // How often the list checks the cloud for status changes (in milliseconds).
 const REFRESH_INTERVAL_MS = 15000;
+
+// How long a record that was just sent is kept on screen while we wait for
+// the cloud list to include it.
+const UNCONFIRMED_TIMEOUT_MS = 60000;
 
 const COLORS = {
   bg: '#F7F8F5',
@@ -120,6 +124,61 @@ function mergeActivities(cloudItems, localItems) {
   return [...localItems, ...cloudItems].sort((a, b) => b.time - a.time);
 }
 
+// A record that was just sent from this phone. It is shown straight away as
+// a cloud record (Pending) so the list never has a gap while we wait for the
+// next check of the cloud.
+function toSyncedItem(record) {
+  return {
+    id: String(record.serverId),
+    name: record.scientificName || 'Unknown plant',
+    status: 'Pending',
+    detail: 'Submitted · Waiting for approval',
+    date: formatDate(record.createdAt),
+    time: toTime(record.createdAt),
+  };
+}
+
+// Compares the records waiting to be sent before and now, and returns the
+// ones that were sent in between.
+function findJustSentRecords(previousUnsentIds, records) {
+  const all = records || [];
+
+  const unsentIds = new Set(
+    all
+      .filter((record) => record.status === 'pending' && !record.serverId)
+      .map((record) => record.id)
+  );
+
+  const justSent = previousUnsentIds
+    ? all.filter(
+        (record) =>
+          previousUnsentIds.has(record.id) &&
+          !unsentIds.has(record.id) &&
+          record.serverId
+      )
+    : [];
+
+  return { unsentIds, justSent };
+}
+
+// Adds records that were just sent but are not in the cloud list yet. Once
+// the cloud list includes them (or too much time has passed) they are
+// forgotten. Removes those from the `unconfirmed` map as it goes.
+function mergeUnconfirmed(cloudItems, unconfirmed, now) {
+  const cloudIds = new Set(cloudItems.map((item) => item.id));
+  const stillWaiting = [];
+
+  unconfirmed.forEach((entry, id) => {
+    if (cloudIds.has(id) || now - entry.since > UNCONFIRMED_TIMEOUT_MS) {
+      unconfirmed.delete(id);
+    } else {
+      stillWaiting.push(entry.item);
+    }
+  });
+
+  return [...cloudItems, ...stillWaiting];
+}
+
 export default function MyActivitiesSection() {
   const navigation = useNavigation();
   const { user } = useUser();
@@ -133,6 +192,8 @@ export default function MyActivitiesSection() {
   const hasLoadedRef = useRef(false);
   const fetchingRef = useRef(false);
   const lastSignatureRef = useRef(null);
+  const unconfirmedRef = useRef(new Map()); // cloud ID -> { item, since }
+  const prevUnsentRef = useRef(null);
 
   // Always call the newest version of the records sync.
   const { records, syncApprovedRecords } = useRecords();
@@ -206,7 +267,11 @@ export default function MyActivitiesSection() {
           };
         });
 
-        setCloudActivities(formatted);
+        // Records just sent from this phone may not be in the cloud list yet.
+        // Keep showing them until the cloud confirms them.
+        setCloudActivities(
+          mergeUnconfirmed(formatted, unconfirmedRef.current, Date.now())
+        );
         setLoadError(false);
         hasLoadedRef.current = true;
 
@@ -265,6 +330,41 @@ export default function MyActivitiesSection() {
       };
     }, [fetchActivities])
   );
+
+  // When a record saved on this phone gets sent to the cloud, show it from
+  // the cloud side right away (still Pending) instead of leaving a gap until
+  // the next check, then confirm it with the cloud. (Runs before the screen is
+  // drawn, so the card never flashes away.)
+  useLayoutEffect(() => {
+    const { unsentIds, justSent } = findJustSentRecords(
+      prevUnsentRef.current,
+      records
+    );
+
+    prevUnsentRef.current = unsentIds;
+
+    if (justSent.length === 0) return;
+
+    const now = Date.now();
+
+    justSent.forEach((record) => {
+      unconfirmedRef.current.set(String(record.serverId), {
+        item: toSyncedItem(record),
+        since: now,
+      });
+    });
+
+    setCloudActivities((current) => {
+      const known = new Set(current.map((item) => item.id));
+      const added = justSent
+        .filter((record) => !known.has(String(record.serverId)))
+        .map(toSyncedItem);
+
+      return added.length > 0 ? [...current, ...added] : current;
+    });
+
+    fetchActivities({ silent: true });
+  }, [records, fetchActivities]);
 
   // The cloud list plus the records still waiting on this phone.
   const activities = useMemo(
