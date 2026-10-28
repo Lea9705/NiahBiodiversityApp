@@ -18,7 +18,7 @@ export default function RoleSelectScreen({ navigation }) {
       style={styles.container}
       resizeMode="cover"
     >
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="dark-content" />
 
       <View style={styles.overlay}>
         <SafeAreaView style={styles.safeArea}>
@@ -29,7 +29,7 @@ export default function RoleSelectScreen({ navigation }) {
                 <Ionicons
                   name="leaf-outline"
                   size={44}
-                  color="#8BD66D"
+                  color="#2A7A45"
                 />
               </View>
 
@@ -57,7 +57,7 @@ export default function RoleSelectScreen({ navigation }) {
                   <Ionicons
                     name="clipboard-outline"
                     size={27}
-                    color="#55B8FF"
+                    color="#1F6FB0"
                   />
                 </View>
 
@@ -74,7 +74,7 @@ export default function RoleSelectScreen({ navigation }) {
                 <Ionicons
                   name="chevron-forward"
                   size={22}
-                  color="#B6C1B8"
+                  color="#6B7D6F"
                 />
               </TouchableOpacity>
 
@@ -89,7 +89,7 @@ export default function RoleSelectScreen({ navigation }) {
                   <Ionicons
                     name="location-outline"
                     size={27}
-                    color="#8BD66D"
+                    color="#2A7A45"
                   />
                 </View>
 
@@ -106,7 +106,7 @@ export default function RoleSelectScreen({ navigation }) {
                 <Ionicons
                   name="chevron-forward"
                   size={22}
-                  color="#B6C1B8"
+                  color="#6B7D6F"
                 />
               </TouchableOpacity>
             </View>
@@ -116,7 +116,7 @@ export default function RoleSelectScreen({ navigation }) {
               <Ionicons
                 name="leaf-outline"
                 size={14}
-                color="#91B79A"
+                color="#5E7062"
               />
               <Text style={styles.footerText}>
                 DISCOVER · DOCUMENT · CONSERVE
@@ -132,12 +132,12 @@ export default function RoleSelectScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#101711',
+    backgroundColor: '#EAF0E8',
   },
 
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(5, 12, 8, 0.66)',
+    backgroundColor: 'rgba(247, 248, 245, 0.84)',
   },
 
   safeArea: {
@@ -160,9 +160,9 @@ const styles = StyleSheet.create({
     width: 92,
     height: 92,
     borderRadius: 28,
-    backgroundColor: '#193719',
+    backgroundColor: '#E3F1E6',
     borderWidth: 1,
-    borderColor: 'rgba(139, 214, 109, 0.45)',
+    borderColor: 'rgba(42, 122, 69, 0.35)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 22,
@@ -171,14 +171,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#F5F6F0',
+    color: '#17261C',
     textAlign: 'center',
     letterSpacing: -0.7,
   },
 
   subtitle: {
     fontSize: 15,
-    color: '#D0D8D0',
+    color: '#4D6052',
     marginTop: 10,
     textAlign: 'center',
   },
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 3,
     borderRadius: 3,
-    backgroundColor: '#78B96C',
+    backgroundColor: '#2A7A45',
     marginTop: 23,
   },
 
@@ -199,9 +199,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 15,
-    backgroundColor: 'rgba(22, 34, 27, 0.91)',
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
     borderWidth: 1,
-    borderColor: 'rgba(157, 190, 158, 0.48)',
+    borderColor: '#CFDACB',
     borderRadius: 22,
     paddingVertical: 19,
     paddingHorizontal: 17,
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     width: 62,
     height: 62,
     borderRadius: 19,
-    backgroundColor: '#10364A',
+    backgroundColor: '#E1EEF9',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     width: 62,
     height: 62,
     borderRadius: 19,
-    backgroundColor: '#1D3A1D',
+    backgroundColor: '#E3F1E6',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -234,13 +234,13 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#F4F6F0',
+    color: '#17261C',
   },
 
   cardSub: {
     fontSize: 12,
     lineHeight: 18,
-    color: '#B8C1B9',
+    color: '#5E7062',
   },
 
   footer: {
@@ -255,6 +255,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     letterSpacing: 1.4,
-    color: '#A4B9A5',
+    color: '#5E7062',
   },
 });

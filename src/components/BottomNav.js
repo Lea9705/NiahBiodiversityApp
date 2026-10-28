@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
     marginTop: 0,
     paddingTop: 8,
     paddingBottom: 12,
-    backgroundColor: '#071711',
+    backgroundColor: '#FFFFFF',
     marginBottom: 8,
   },
 });

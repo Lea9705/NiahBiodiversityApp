@@ -8,6 +8,7 @@ import {
   Alert,
   Linking,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -333,6 +334,7 @@ export default function ScanQRScreen({ navigation, route }) {
   if (!permission) {
     return (
       <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor={DARK.bg} />
         <SafeAreaView style={styles.flex} edges={safeEdges}>
           <View style={styles.centerBox}>
             <ActivityIndicator color={DARK.green} />
@@ -347,6 +349,7 @@ export default function ScanQRScreen({ navigation, route }) {
   if (!permission.granted) {
     return (
       <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor={DARK.bg} />
         <SafeAreaView style={styles.flex} edges={safeEdges}>
           {isVisitor && (
             <TouchableOpacity
@@ -393,6 +396,7 @@ export default function ScanQRScreen({ navigation, route }) {
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={DARK.bg} />
       {isFocused && (
         <CameraView
           style={StyleSheet.absoluteFillObject}

@@ -75,7 +75,7 @@ export default function BotanistLoginScreen({ navigation }) {
       style={styles.container}
       resizeMode="cover"
     >
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="dark-content" />
 
       <View style={styles.overlay}>
         <SafeAreaView style={styles.safeArea}>
@@ -99,7 +99,7 @@ export default function BotanistLoginScreen({ navigation }) {
                   <Ionicons
                     name="clipboard-outline"
                     size={32}
-                    color="#55B8FF"
+                    color="#1F6FB0"
                   />
                 </View>
 
@@ -111,7 +111,7 @@ export default function BotanistLoginScreen({ navigation }) {
                   <Ionicons
                     name="leaf-outline"
                     size={15}
-                    color="#8BD66D"
+                    color="#2A7A45"
                   />
                   <Text style={styles.roleBadgeText}>
                     BOTANIST ACCESS
@@ -193,7 +193,7 @@ export default function BotanistLoginScreen({ navigation }) {
                           : 'eye-outline'
                       }
                       size={19}
-                      color="#A9B8AB"
+                      color="#5E7062"
                     />
 
                     <Text style={styles.passwordToggleText}>
@@ -224,7 +224,7 @@ export default function BotanistLoginScreen({ navigation }) {
                     <Ionicons
                       name="alert-circle-outline"
                       size={18}
-                      color="#F08C86"
+                      color="#B3392F"
                     />
                     <Text style={styles.errorBannerText}>{loginError}</Text>
                   </View>
@@ -243,7 +243,7 @@ export default function BotanistLoginScreen({ navigation }) {
                   <Ionicons
                     name="shield-checkmark-outline"
                     size={18}
-                    color="#8BD66D"
+                    color="#2A7A45"
                   />
 
                   <Text style={styles.note}>
@@ -258,7 +258,7 @@ export default function BotanistLoginScreen({ navigation }) {
                 <Ionicons
                   name="leaf-outline"
                   size={14}
-                  color="#91B79A"
+                  color="#5E7062"
                 />
 
                 <Text style={styles.footerText}>
@@ -276,12 +276,12 @@ export default function BotanistLoginScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#101711',
+    backgroundColor: '#EAF0E8',
   },
 
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(5, 12, 8, 0.76)',
+    backgroundColor: 'rgba(247, 248, 245, 0.88)',
   },
 
   safeArea: {
@@ -316,9 +316,9 @@ const styles = StyleSheet.create({
     width: 78,
     height: 78,
     borderRadius: 25,
-    backgroundColor: '#10364A',
+    backgroundColor: '#E1EEF9',
     borderWidth: 1,
-    borderColor: 'rgba(85, 184, 255, 0.45)',
+    borderColor: 'rgba(31, 111, 176, 0.35)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 17,
@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 13,
     lineHeight: 20,
-    color: '#C5D0C7',
+    color: '#4D6052',
     textAlign: 'center',
     marginTop: 7,
   },
@@ -340,8 +340,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(92, 174, 103, 0.55)',
-    backgroundColor: 'rgba(20, 61, 34, 0.8)',
+    borderColor: 'rgba(42, 122, 69, 0.45)',
+    backgroundColor: '#E3F1E6',
     marginTop: 18,
   },
 
@@ -349,13 +349,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 1.2,
-    color: '#A7D99A',
+    color: '#245F39',
   },
 
   formCard: {
-    backgroundColor: 'rgba(20, 31, 24, 0.94)',
+    backgroundColor: 'rgba(255, 255, 255, 0.96)',
     borderWidth: 1,
-    borderColor: 'rgba(157, 190, 158, 0.38)',
+    borderColor: '#D3E0D0',
     borderRadius: 24,
     padding: 20,
   },
@@ -363,13 +363,13 @@ const styles = StyleSheet.create({
   formTitle: {
     fontSize: 21,
     fontWeight: '700',
-    color: '#F5F6F0',
+    color: '#17261C',
   },
 
   formSubtitle: {
     fontSize: 12,
     lineHeight: 18,
-    color: '#AEBBB0',
+    color: '#5E7062',
     marginTop: 6,
     marginBottom: 22,
   },
@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
 
   passwordToggleText: {
     fontSize: 12,
-    color: '#A9B8AB',
+    color: '#5E7062',
   },
 
   forgotButton: {
@@ -401,7 +401,7 @@ const styles = StyleSheet.create({
   forgot: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#8BD66D',
+    color: '#2A7A45',
   },
 
   errorBanner: {
@@ -412,15 +412,15 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#713A38',
-    backgroundColor: '#251B19',
+    borderColor: '#F0BDB8',
+    backgroundColor: '#FCE9E7',
   },
 
   errorBannerText: {
     flex: 1,
     fontSize: 12,
     lineHeight: 18,
-    color: '#F5B8B3',
+    color: '#8E2B23',
   },
 
   loginButton: {
@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 10,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(157, 190, 158, 0.2)',
+    borderTopColor: '#DDE6DA',
     paddingTop: 16,
   },
 
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 11,
     lineHeight: 17,
-    color: '#B8C4B9',
+    color: '#5E7062',
   },
 
   footer: {
@@ -459,6 +459,6 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '600',
     letterSpacing: 1.2,
-    color: '#A4B9A5',
+    color: '#5E7062',
   },
 });

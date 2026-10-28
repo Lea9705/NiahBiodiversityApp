@@ -13,16 +13,16 @@ import { Ionicons } from '@expo/vector-icons';
 import BackButton from '../components/BackButton';
 
 const COLORS = {
-  bg: '#0B1712',
-  surface: '#14251B',
-  surfaceLight: '#1C3023',
-  green: '#B8E986',
-  text: '#F2F6EE',
-  muted: '#9BAE9F',
-  border: '#2A4031',
-  error: '#F08C86',
-  errorBg: '#251B19',
-  errorBorder: '#713A38',
+  bg: '#F7F8F5',
+  surface: '#FFFFFF',
+  surfaceLight: '#E3F1E6',
+  green: '#2A7A45',
+  text: '#17261C',
+  muted: '#5E7062',
+  border: '#D3DFCF',
+  error: '#B3392F',
+  errorBg: '#FCE9E7',
+  errorBorder: '#F0BDB8',
 };
 
 const profileFields = [
@@ -44,7 +44,7 @@ export default function BotanistProfileScreen({ navigation }) {
       edges={['top', 'left', 'right', 'bottom']}
     >
       <StatusBar
-        barStyle="light-content"
+        barStyle="dark-content"
         backgroundColor={COLORS.bg}
       />
 
@@ -59,7 +59,7 @@ export default function BotanistProfileScreen({ navigation }) {
           <Ionicons
             name="person"
             size={43}
-            color="#54B5F4"
+            color="#1F6FB0"
           />
         </View>
 
@@ -73,7 +73,7 @@ export default function BotanistProfileScreen({ navigation }) {
           <Ionicons
             name="leaf-outline"
             size={16}
-            color="#54B5F4"
+            color="#1F6FB0"
           />
           <Text style={styles.roleBadgeText}>BOTANIST</Text>
         </View>
@@ -94,7 +94,7 @@ export default function BotanistProfileScreen({ navigation }) {
               <Ionicons
                 name={field.icon}
                 size={23}
-                color="#54B5F4"
+                color="#1F6FB0"
               />
             </View>
 
@@ -160,9 +160,9 @@ const styles = StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: 44,
-    backgroundColor: '#06432F',
+    backgroundColor: '#DDEFE2',
     borderWidth: 2,
-    borderColor: '#397A56',
+    borderColor: '#9CC9A8',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -191,13 +191,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 8,
     borderRadius: 24,
-    backgroundColor: '#0D2C20',
+    backgroundColor: '#E7F2E9',
     borderWidth: 1,
-    borderColor: '#23734A',
+    borderColor: '#A9D2B4',
   },
 
   roleBadgeText: {
-    color: '#54B5F4',
+    color: '#1F6FB0',
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 1.5,

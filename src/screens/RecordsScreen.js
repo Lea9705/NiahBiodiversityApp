@@ -16,16 +16,16 @@ import BackButton from '../components/BackButton';
 import { useRecords } from '../context/RecordsContext';
 
 const COLORS = {
-  bg: '#0B1712',
-  surface: '#14251B',
-  surfaceLight: '#1C3023',
-  green: '#B8E986',
-  text: '#F2F6EE',
-  muted: '#9BAE9F',
-  border: '#2A4031',
-  successBg: '#203B2A',
-  warning: '#F2C879',
-  warningBg: '#3B3020',
+  bg: '#F7F8F5',
+  surface: '#FFFFFF',
+  surfaceLight: '#E3F1E6',
+  green: '#2A7A45',
+  text: '#17261C',
+  muted: '#5E7062',
+  border: '#D3DFCF',
+  successBg: '#E8F5EB',
+  warning: '#8A5A00',
+  warningBg: '#FBEED0',
 };
 
 export default function RecordsScreen({ navigation }) {
@@ -117,7 +117,7 @@ export default function RecordsScreen({ navigation }) {
       edges={['top', 'left', 'right']}
     >
       <StatusBar
-        barStyle="light-content"
+        barStyle="dark-content"
         backgroundColor={COLORS.bg}
       />
 

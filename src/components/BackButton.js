@@ -4,9 +4,9 @@ import { Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 const COLORS = {
-  surface: '#14251B',
-  green: '#B8E986',
-  border: '#2A4031',
+  surface: '#FFFFFF',
+  green: '#2A7A45',
+  border: '#D3DFCF',
 };
 
 export default function BackButton({ onPress }) {

@@ -22,15 +22,15 @@ import BotanistBottomNav from '../components/BotanistBottomNav';
 import { useRecords } from '../context/RecordsContext';
 
 const FOREST = {
-  background: '#0B1712',
-  card: '#14251B',
-  cardBorder: '#2A4031',
-  green: '#B8E986',
-  greenDark: '#1C3023',
-  placeholderBg: '#20351A',
-  text: '#F2F6EB',
-  secondary: '#9BAE9F',
-  muted: '#71806D',
+  background: '#F7F8F5',
+  card: '#FFFFFF',
+  cardBorder: '#D3DFCF',
+  green: '#2A7A45',
+  greenDark: '#E3F1E6',
+  placeholderBg: '#E3EEE1',
+  text: '#17261C',
+  secondary: '#4D6052',
+  muted: '#5F7164',
 };
 
 const isApproved = (record) =>
@@ -237,7 +237,7 @@ export default function ExploreScreen({ navigation }) {
       style={styles.container}
       edges={['top', 'left', 'right']}
     >
-      <StatusBar barStyle="light-content" backgroundColor={FOREST.background} />
+      <StatusBar barStyle="dark-content" backgroundColor={FOREST.background} />
 
       <FlatList
         key="plant-grid"
@@ -435,9 +435,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(11, 23, 18, 0.88)',
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
     borderWidth: 1,
-    borderColor: '#3A5131',
+    borderColor: '#CFE0CB',
   },
 
   plantInfo: {

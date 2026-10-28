@@ -19,13 +19,20 @@ import BackButton from '../components/BackButton';
 const API_URL = 'http://52.62.125.146/api/plants';
 
 const COLORS = {
-  bg: '#0B1712',
-  surface: '#14251B',
-  surfaceLight: '#1C3023',
-  green: '#B8E986',
+  bg: '#F7F8F5',
+  surface: '#FFFFFF',
+  surfaceLight: '#E3F1E6',
+  green: '#2A7A45',
+  text: '#17261C',
+  muted: '#5E7062',
+  border: '#D3DFCF',
+};
+
+// The hero card keeps its deep-forest look, so its text uses fixed light colours.
+const HERO = {
   text: '#F2F6EE',
-  muted: '#9BAE9F',
-  border: '#2A4031',
+  green: '#B8E986',
+  dark: '#0B1712',
 };
 
 export default function VisitorHomeScreen({ navigation }) {
@@ -107,7 +114,7 @@ export default function VisitorHomeScreen({ navigation }) {
       style={styles.container}
       edges={['top', 'left', 'right']}
     >
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.bg} />
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -162,7 +169,7 @@ export default function VisitorHomeScreen({ navigation }) {
             onPress={() => navigation.navigate('VisitorExplore')}
           >
             <Text style={styles.heroButtonText}>Explore plants</Text>
-            <Ionicons name="arrow-forward" size={18} color={COLORS.bg} />
+            <Ionicons name="arrow-forward" size={18} color={HERO.dark} />
           </Pressable>
 
           <View style={styles.heroDecoration}>
@@ -459,23 +466,23 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: COLORS.green,
+    backgroundColor: HERO.green,
   },
   heroTagText: {
-    color: COLORS.green,
+    color: HERO.green,
     fontSize: 9,
     fontWeight: '800',
     letterSpacing: 1.3,
   },
   heroTitle: {
-    color: COLORS.text,
+    color: HERO.text,
     fontSize: 39,
     lineHeight: 43,
     fontWeight: '900',
     letterSpacing: -1.3,
   },
   heroTitleAccent: {
-    color: COLORS.green,
+    color: HERO.green,
   },
   heroDescription: {
     color: '#C0D0C2',
@@ -489,14 +496,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'flex-start',
     gap: 10,
-    backgroundColor: COLORS.green,
+    backgroundColor: HERO.green,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 13,
     marginTop: 20,
   },
   heroButtonText: {
-    color: COLORS.bg,
+    color: HERO.dark,
     fontSize: 12,
     fontWeight: '800',
   },
@@ -717,7 +724,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: '#172C20',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: 18,
@@ -747,7 +754,7 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   footer: {
-    color: '#627767',
+    color: '#5E7062',
     fontSize: 9,
     fontWeight: '700',
     letterSpacing: 1.3,

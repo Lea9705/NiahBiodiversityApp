@@ -19,14 +19,21 @@ import BottomNav from '../components/BottomNav';
 const API_URL = 'http://52.62.125.146/api/plants';
 
 const FOREST = {
-  background: '#101810',
-  card: '#192419',
-  cardBorder: '#2A3829',
-  green: '#A8D96B',
-  greenDark: '#243B19',
+  background: '#F7F8F5',
+  card: '#FFFFFF',
+  cardBorder: '#D3DFCF',
+  green: '#2A7A45',
+  greenDark: '#E3F1E6',
+  text: '#17261C',
+  secondary: '#4D6052',
+  muted: '#5F7164',
+};
+
+// The hero card keeps its deep-forest look, so its text uses fixed light colours.
+const HERO = {
   text: '#F2F5EB',
+  green: '#A8D96B',
   secondary: '#A7B3A0',
-  muted: '#71806D',
 };
 
 export default function VisitorExploreScreen({ navigation }) {
@@ -181,7 +188,7 @@ export default function VisitorExploreScreen({ navigation }) {
       style={styles.container}
       edges={['top', 'left', 'right']}
     >
-      <StatusBar barStyle="light-content" backgroundColor={FOREST.background} />
+      <StatusBar barStyle="dark-content" backgroundColor={FOREST.background} />
 
       <FlatList
         key="plant-grid"
@@ -489,7 +496,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     letterSpacing: 2,
     fontWeight: '800',
-    color: FOREST.green,
+    color: HERO.green,
     marginBottom: 13,
   },
 
@@ -498,11 +505,11 @@ const styles = StyleSheet.create({
     lineHeight: 41,
     fontWeight: '800',
     letterSpacing: -1.3,
-    color: FOREST.text,
+    color: HERO.text,
   },
 
   heroHighlight: {
-    color: FOREST.green,
+    color: HERO.green,
   },
 
   heroDescription: {
@@ -523,7 +530,7 @@ const styles = StyleSheet.create({
   heroDivider: {
     height: 2,
     width: 22,
-    backgroundColor: FOREST.green,
+    backgroundColor: HERO.green,
     borderRadius: 2,
   },
 
@@ -531,7 +538,7 @@ const styles = StyleSheet.create({
     fontSize: 7,
     letterSpacing: 1.1,
     fontWeight: '700',
-    color: FOREST.secondary,
+    color: HERO.secondary,
   },
 
   sectionHeader: {
@@ -657,7 +664,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#20351A',
+    backgroundColor: '#E3EEE1',
   },
 
   placeholderText: {
@@ -681,9 +688,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(16, 24, 16, 0.88)',
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
     borderWidth: 1,
-    borderColor: '#3A5131',
+    borderColor: '#CFE0CB',
   },
 
   plantInfo: {

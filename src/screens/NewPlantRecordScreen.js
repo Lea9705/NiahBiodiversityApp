@@ -25,17 +25,17 @@ import BackButton from '../components/BackButton';
 import { useRecords } from '../context/RecordsContext';
 
 const COLORS = {
-  bg: '#0B1712',
-  surface: '#14251B',
-  surfaceLight: '#1C3023',
-  green: '#B8E986',
-  text: '#F2F6EE',
-  muted: '#9BAE9F',
-  border: '#2A4031',
+  bg: '#F7F8F5',
+  surface: '#FFFFFF',
+  surfaceLight: '#E3F1E6',
+  green: '#2A7A45',
+  text: '#17261C',
+  muted: '#5E7062',
+  border: '#D3DFCF',
   white: '#FFFFFF',
-  successBg: '#203B2A',
-  warningBg: '#3B3020',
-  warning: '#F2C879',
+  successBg: '#E8F5EB',
+  warningBg: '#FBEED0',
+  warning: '#8A5A00',
 };
 
 export default function NewPlantRecordScreen({ navigation }) {
@@ -209,7 +209,7 @@ export default function NewPlantRecordScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar
-        barStyle="light-content"
+        barStyle="dark-content"
         backgroundColor={COLORS.bg}
       />
 
@@ -659,7 +659,7 @@ const styles = StyleSheet.create({
 
   badgeOffline: {
     backgroundColor: COLORS.warningBg,
-    borderColor: '#57472C',
+    borderColor: '#E3CD94',
   },
 
   statusText: {
@@ -787,7 +787,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
     paddingVertical: 4,
     borderRadius: 7,
-    backgroundColor: '#0B1712DD',
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
   },
 
   photoNumberText: {
@@ -942,7 +942,7 @@ const styles = StyleSheet.create({
   },
 
   footer: {
-    color: '#627767',
+    color: '#5E7062',
     fontSize: 9,
     fontWeight: '700',
     letterSpacing: 1.2,

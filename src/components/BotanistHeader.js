@@ -6,14 +6,14 @@ import { useNavigation } from '@react-navigation/native';
 import { useUser } from '../context/UserContext';
 
 const COLORS = {
-  surfaceLight: '#1C3023',
-  green: '#B8E986',
-  text: '#F2F6EE',
-  muted: '#9BAE9F',
-  border: '#2A4031',
-  error: '#F08C86',
-  errorBg: '#251B19',
-  errorBorder: '#713A38',
+  surfaceLight: '#E3F1E6',
+  green: '#2A7A45',
+  text: '#17261C',
+  muted: '#5E7062',
+  border: '#D3DFCF',
+  error: '#B3392F',
+  errorBg: '#FCE9E7',
+  errorBorder: '#F0BDB8',
 };
 
 export default function BotanistHeader() {

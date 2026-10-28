@@ -17,13 +17,13 @@ import { useRecords } from '../context/RecordsContext';
 import BackButton from '../components/BackButton';
 
 const COLORS = {
-  bg: '#0B1712',
-  surface: '#14251B',
-  surfaceLight: '#1C3023',
-  green: '#B8E986',
-  text: '#F2F6EE',
-  muted: '#9BAE9F',
-  border: '#2A4031',
+  bg: '#F7F8F5',
+  surface: '#FFFFFF',
+  surfaceLight: '#E3F1E6',
+  green: '#2A7A45',
+  text: '#17261C',
+  muted: '#5E7062',
+  border: '#D3DFCF',
   white: '#FFFFFF',
 };
 
@@ -88,7 +88,7 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar
-        barStyle="light-content"
+        barStyle="dark-content"
         backgroundColor={COLORS.bg}
       />
 
@@ -636,7 +636,7 @@ const styles = StyleSheet.create({
     width: 29,
     height: 29,
     borderRadius: 10,
-    backgroundColor: '#0B1712DD',
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -897,7 +897,7 @@ const styles = StyleSheet.create({
   },
 
   footer: {
-    color: '#627767',
+    color: '#5E7062',
     fontSize: 9,
     fontWeight: '700',
     letterSpacing: 1.2,

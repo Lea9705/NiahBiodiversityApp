@@ -21,16 +21,16 @@ import { useRecords } from '../context/RecordsContext';
 import { authFetch } from '../utils/session';
 
 const COLORS = {
-  bg: '#0B1712',
-  surface: '#14251B',
-  surfaceLight: '#1C3023',
-  green: '#B8E986',
-  text: '#F2F6EE',
-  muted: '#9BAE9F',
-  border: '#2A4031',
-  warning: '#F2C879',
-  warningBg: '#3B3020',
-  successBg: '#203B2A',
+  bg: '#F7F8F5',
+  surface: '#FFFFFF',
+  surfaceLight: '#E3F1E6',
+  green: '#2A7A45',
+  text: '#17261C',
+  muted: '#5E7062',
+  border: '#D3DFCF',
+  warning: '#8A5A00',
+  warningBg: '#FBEED0',
+  successBg: '#E8F5EB',
 };
 
 export default function BotanistHomeScreen({ navigation }) {
@@ -116,7 +116,7 @@ export default function BotanistHomeScreen({ navigation }) {
       style={styles.container}
       edges={['top', 'left', 'right']}
     >
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.bg} />
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} />
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
 
   badgeOffline: {
     backgroundColor: COLORS.warningBg,
-    borderColor: '#57472C',
+    borderColor: '#E3CD94',
   },
 
   statusDot: {

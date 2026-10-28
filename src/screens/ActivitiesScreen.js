@@ -18,19 +18,19 @@ import BackButton from '../components/BackButton';
 import { authFetch } from '../utils/session';
 
 const COLORS = {
-  bg: '#0B1712',
-  surface: '#14251B',
-  surfaceLight: '#1C3023',
-  green: '#B8E986',
-  text: '#F2F6EE',
-  muted: '#9BAE9F',
-  border: '#2A4031',
-  success: '#B8E986',
-  successBg: '#203B2A',
-  warning: '#F2C879',
-  warningBg: '#3B3020',
-  error: '#F08C86',
-  errorBg: '#3B2322',
+  bg: '#F7F8F5',
+  surface: '#FFFFFF',
+  surfaceLight: '#E3F1E6',
+  green: '#2A7A45',
+  text: '#17261C',
+  muted: '#5E7062',
+  border: '#D3DFCF',
+  success: '#2A7A45',
+  successBg: '#E8F5EB',
+  warning: '#8A5A00',
+  warningBg: '#FBEED0',
+  error: '#B3392F',
+  errorBg: '#FCE9E7',
 };
 
 const FILTERS = ['All', 'Pending', 'Approved', 'Rejected'];
@@ -437,7 +437,7 @@ export default function ActivitiesScreen({ navigation }) {
       edges={['top', 'left', 'right']}
     >
       <StatusBar
-        barStyle="light-content"
+        barStyle="dark-content"
         backgroundColor={COLORS.bg}
       />
 

@@ -18,13 +18,13 @@ import BottomNav from '../components/BottomNav';
 const API_URL = 'http://52.62.125.146/api/plants';
 
 const FOREST = {
-  background: '#101810',
-  card: '#192419',
-  border: '#2A3829',
-  green: '#A8D96B',
-  text: '#F2F5EB',
-  secondary: '#A7B3A0',
-  muted: '#71806D',
+  background: '#F7F8F5',
+  card: '#FFFFFF',
+  border: '#D3DFCF',
+  green: '#2A7A45',
+  text: '#17261C',
+  secondary: '#4D6052',
+  muted: '#5F7164',
 };
 
 const NIAH_REGION = {
@@ -143,7 +143,7 @@ export default function VisitorMapScreen({ navigation }) {
       edges={['top', 'left', 'right']}
     >
       <StatusBar
-        barStyle="light-content"
+        barStyle="dark-content"
         backgroundColor={FOREST.background}
       />
 
@@ -203,7 +203,7 @@ export default function VisitorMapScreen({ navigation }) {
                         <Ionicons
                             name="leaf"
                             size={17}
-                            color="#101810"
+                            color="#FFFFFF"
                         />
                     </View>
                 </Marker>
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#243B19',
+    backgroundColor: '#E3F1E6',
   },
 
   headingText: {
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
 
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(16,24,16,0.88)',
+    backgroundColor: 'rgba(247,248,245,0.92)',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#243B19',
+    backgroundColor: '#E3F1E6',
   },
 
   selectedInfo: {
