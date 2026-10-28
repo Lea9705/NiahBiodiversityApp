@@ -13,7 +13,6 @@ import PlantDetailScreen from '../screens/PlantDetailScreen';
 import BotanistProfileScreen from '../screens/BotanistProfileScreen';
 import { colors } from '../theme/colors';
 import ScanQRScreen from '../screens/ScanQRScreen';
-import ActivitiesScreen from '../screens/ActivitiesScreen';
 import ExploreScreen from '../screens/ExploreScreen';
 
 const Stack = createStackNavigator();
@@ -50,7 +49,6 @@ export default function AppNavigator() {
             return { gestureEnabled: visitor, animationEnabled: visitor };
           }}
         />
-        <Stack.Screen name="Activities" component={ActivitiesScreen} />
         <Stack.Screen
           name="Explore"
           component={ExploreScreen}

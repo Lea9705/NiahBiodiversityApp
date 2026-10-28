@@ -128,23 +128,6 @@ export default function BotanistProfileScreen({ navigation }) {
         ))}
       </View>
 
-      {/* Logout button */}
-      <Pressable
-        style={({ pressed }) => [
-          styles.logoutButton,
-          pressed && styles.logoutPressed,
-        ]}
-        onPress={handleLogout}
-        accessibilityRole="button"
-        accessibilityLabel="Log out"
-      >
-        <Ionicons
-          name="log-out-outline"
-          size={21}
-          color={COLORS.error}
-        />
-        <Text style={styles.logoutText}>Log Out</Text>
-      </Pressable>
     </SafeAreaView>
   );
 }

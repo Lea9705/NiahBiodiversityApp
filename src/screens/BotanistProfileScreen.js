@@ -4,13 +4,24 @@ import {
   View,
   Text,
   StyleSheet,
-  Pressable,
   StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import BackButton from '../components/BackButton';
+import { useUser } from '../context/UserContext';
+
+// The details come from the account that logged in.
+function buildProfileFields(user) {
+  return [
+    { label: 'Staff ID', value: user?.id || 'Not set up yet', icon: 'id-card-outline' },
+    { label: 'Email', value: user?.email || 'Not set up yet', icon: 'mail-outline' },
+    { label: 'Phone Number', value: user?.phone || 'Not added', icon: 'call-outline' },
+    { label: 'Unit', value: user?.unit || 'Not assigned', icon: 'people-outline' },
+    { label: 'Department', value: user?.department || 'Not assigned', icon: 'business-outline' },
+  ];
+}
 
 const COLORS = {
   bg: '#F7F8F5',
@@ -20,23 +31,11 @@ const COLORS = {
   text: '#17261C',
   muted: '#5E7062',
   border: '#D3DFCF',
-  error: '#B3392F',
-  errorBg: '#FCE9E7',
-  errorBorder: '#F0BDB8',
 };
 
-const profileFields = [
-  { label: 'Staff ID', value: 'Not set up yet', icon: 'id-card-outline' },
-  { label: 'Email', value: 'Not set up yet', icon: 'mail-outline' },
-  { label: 'Phone Number', value: 'Not added', icon: 'call-outline' },
-  { label: 'Unit', value: 'Not assigned', icon: 'people-outline' },
-  { label: 'Department', value: 'Not assigned', icon: 'business-outline' },
-];
-
 export default function BotanistProfileScreen({ navigation }) {
-  const handleLogout = () => {
-    navigation.replace('RoleSelect');
-  };
+  const { user } = useUser();
+  const profileFields = buildProfileFields(user);
 
   return (
     <SafeAreaView
@@ -113,24 +112,6 @@ export default function BotanistProfileScreen({ navigation }) {
           </View>
         ))}
       </View>
-
-      {/* Logout button */}
-      <Pressable
-        style={({ pressed }) => [
-          styles.logoutButton,
-          pressed && styles.logoutPressed,
-        ]}
-        onPress={handleLogout}
-        accessibilityRole="button"
-        accessibilityLabel="Log out"
-      >
-        <Ionicons
-          name="log-out-outline"
-          size={21}
-          color={COLORS.error}
-        />
-        <Text style={styles.logoutText}>Log Out</Text>
-      </Pressable>
     </SafeAreaView>
   );
 }
@@ -252,27 +233,6 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
 
-  logoutButton: {
-    minHeight: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: COLORS.errorBorder,
-    backgroundColor: COLORS.errorBg,
-    borderRadius: 15,
-    paddingVertical: 12,
-    gap: 10,
-    marginTop: 0,
-  },
 
-  logoutPressed: {
-    opacity: 0.7,
-  },
 
-  logoutText: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: COLORS.error,
-  },
 });

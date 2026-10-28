@@ -3,14 +3,29 @@
 // retries any "pending" record in the background, waiting longer
 // between tries when a record keeps failing.
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { AppState } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { getDatabase } from '../db/database';
 import { syncRecordToCloud } from '../utils/syncRecord';
 import { useUser } from './UserContext';
-import { authFetch, getUser } from '../utils/session';
+import { authFetch, getUser, getToken } from '../utils/session';
 import * as SecureStore from 'expo-secure-store';
 
 const RecordsContext = createContext(null);
+
+const PLANTS_URL = 'http://52.62.125.146/api/plants';
+
+// How often the phone checks the cloud for plants that were approved,
+// rejected or deleted (while it is online and someone is logged in).
+const APPROVED_SYNC_INTERVAL_MS = 20000;
+
+function normalizeApproval(value) {
+  const status = String(value || '').trim().toLowerCase();
+
+  if (status === 'approved') return 'Approved';
+  if (status === 'rejected') return 'Rejected';
+  return 'Pending';
+}
 
 export function RecordsProvider({ children }) {
   const [records, setRecords] = useState([]);
@@ -21,6 +36,7 @@ export function RecordsProvider({ children }) {
   const syncingRef = useRef(false);
   const recordsRef = useRef([]);
   const retryRef = useRef({}); // record id -> { fails, nextTry }
+  const approvedSyncRunningRef = useRef(false);
   const { token } = useUser();
 
   useEffect(() => {
@@ -49,13 +65,29 @@ export function RecordsProvider({ children }) {
     return () => unsubscribe();
   }, []);
 
-  // Download approved records whenever internet is available.
+  // Keep the plants on this phone live with the cloud. While the phone is
+  // online and someone is logged in, check right away, then every 20 seconds,
+  // and again whenever the app comes back to the foreground.
   useEffect(() => {
     if (!isOnline || loading || !token) return;
 
-    syncApprovedRecords().catch((error) => {
-      console.log('Approved records sync failed:', error.message);
+    const run = () => {
+      syncApprovedRecords().catch((error) => {
+        console.log('Approved records sync failed:', error.message);
+      });
+    };
+
+    run();
+
+    const intervalId = setInterval(run, APPROVED_SYNC_INTERVAL_MS);
+    const appStateSubscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') run();
     });
+
+    return () => {
+      clearInterval(intervalId);
+      appStateSubscription.remove();
+    };
   }, [isOnline, loading, token]);
 
   const updateRecordStatus = async (id, status) => {
@@ -194,92 +226,204 @@ const updateRecordServerId = async (id, serverId) => {
   };
 
 
-const syncApprovedRecords = async () => {
-  const db = await getDatabase();
+  // Makes the plants on this phone match the cloud database:
+  //  - approved plants are added or updated,
+  //  - plants rejected (or set back to pending) in the cloud leave the
+  //    Explore list,
+  //  - plants deleted from the cloud are deleted here too.
+  // Returns quickly if a check is already running.
+  const syncApprovedRecords = async () => {
+    if (approvedSyncRunningRef.current) return;
+    approvedSyncRunningRef.current = true;
 
-  const token = await SecureStore.getItemAsync('authToken');
-  if (!token) {
-    throw new Error('You must log in before fetching approved plant records.');
-  }
+    try {
+      const db = await getDatabase();
 
-  const response = await authFetch('http://52.62.125.146/api/plants', {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/json',
-    },
-  });
+      const authToken =
+        getToken() || (await SecureStore.getItemAsync('authToken'));
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch plants: ${response.status}`);
-  }
+      if (!authToken) {
+        throw new Error('You must log in before fetching approved plant records.');
+      }
 
-  const data = await response.json();
+      // Note which records are already linked to the cloud BEFORE asking the
+      // server. A record submitted while we wait is then never mistaken for
+      // one that was deleted.
+      const linkedBefore = await db.getAllAsync(
+        'SELECT id, serverId, approvalStatus FROM plants WHERE serverId IS NOT NULL'
+      );
 
-  const approvedPlants = data.filter(
-    (plant) =>
-      String(plant.plant_status || '').trim().toLowerCase() === 'approved'
-  );
+      const response = await authFetch(PLANTS_URL, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          Accept: 'application/json',
+        },
+      });
 
-  for (const plant of approvedPlants) {
-    const serverId = String(plant.id);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch plants: ${response.status}`);
+      }
 
-    const existing = await db.getFirstAsync(
-      'SELECT id FROM plants WHERE serverId = ?',
-      [serverId]
-    );
+      const data = await response.json();
 
-    const localId = existing?.id || `cloud-${serverId}`;
+      if (!Array.isArray(data)) {
+        throw new Error('The plants API did not return a list.');
+      }
 
-    await db.runAsync(
-      `INSERT INTO plants (
-        id, serverId, scientificName, commonName, family,
-        height, diameter, latitude, longitude, notes,
-        photos, status, approvalStatus, createdAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET
-        serverId = excluded.serverId,
-        scientificName = excluded.scientificName,
-        commonName = excluded.commonName,
-        family = excluded.family,
-        height = excluded.height,
-        diameter = excluded.diameter,
-        latitude = excluded.latitude,
-        longitude = excluded.longitude,
-        notes = excluded.notes,
-        photos = excluded.photos,
-        approvalStatus = excluded.approvalStatus`,
-      [
-        localId,
-        serverId,
-        plant.scientific_name || '',
-        plant.common_name || '',
-        plant.family || '',
-        plant.height_m != null ? String(plant.height_m) : '',
-        plant.diameter_cm != null ? String(plant.diameter_cm) : '',
-        plant.latitude != null ? String(plant.latitude) : '',
-        plant.longitude != null ? String(plant.longitude) : '',
-        plant.morphological_notes || '',
-        JSON.stringify(
-          Array.isArray(plant.images) ? plant.images : []
-        ),
-        'synced',
-        'Approved',
-        plant.created_at || new Date().toISOString(),
-      ]
-    );
-  }
+      const cloudById = new Map(data.map((plant) => [String(plant.id), plant]));
+      let changed = false;
 
-  const rows = await db.getAllAsync(
-    'SELECT * FROM plants ORDER BY createdAt DESC'
-  );
+      // 1. Plants that were deleted, rejected or set back to pending.
+      for (const row of linkedBefore) {
+        const cloudPlant = cloudById.get(String(row.serverId));
+        const isCloudCopy = String(row.id).startsWith('cloud-');
 
-  setRecords(
-    rows.map((r) => ({
-      ...r,
-      photos: JSON.parse(r.photos || '[]'),
-    }))
-  );
-};
+        if (!cloudPlant) {
+          // Deleted from the cloud database, so delete it here too.
+          await db.runAsync('DELETE FROM plants WHERE id = ?', [row.id]);
+          changed = true;
+          continue;
+        }
+
+        const cloudStatus = normalizeApproval(cloudPlant.plant_status);
+
+        if (cloudStatus !== 'Approved') {
+          if (isCloudCopy) {
+            // Only a downloaded copy of an approved plant, so remove it.
+            await db.runAsync('DELETE FROM plants WHERE id = ?', [row.id]);
+            changed = true;
+          } else if (row.approvalStatus !== cloudStatus) {
+            // The botanist's own record: keep it, but record its new status.
+            await db.runAsync(
+              'UPDATE plants SET approvalStatus = ? WHERE id = ?',
+              [cloudStatus, row.id]
+            );
+            changed = true;
+          }
+        }
+      }
+
+      // 2. Approved plants: add the new ones, update the ones that changed.
+      const currentRows = await db.getAllAsync(
+        'SELECT * FROM plants WHERE serverId IS NOT NULL'
+      );
+      const currentByServerId = new Map(
+        currentRows.map((row) => [String(row.serverId), row])
+      );
+
+      for (const plant of data) {
+        if (normalizeApproval(plant.plant_status) !== 'Approved') continue;
+
+        const serverId = String(plant.id);
+
+        const fields = {
+          scientificName: plant.scientific_name || '',
+          commonName: plant.common_name || '',
+          family: plant.family || '',
+          height: plant.height_m != null ? String(plant.height_m) : '',
+          diameter: plant.diameter_cm != null ? String(plant.diameter_cm) : '',
+          latitude: plant.latitude != null ? String(plant.latitude) : '',
+          longitude: plant.longitude != null ? String(plant.longitude) : '',
+          notes: plant.morphological_notes || '',
+          photos: JSON.stringify(Array.isArray(plant.images) ? plant.images : []),
+        };
+
+        const existing = currentByServerId.get(serverId);
+
+        if (!existing) {
+          await db.runAsync(
+            `INSERT INTO plants (
+              id, serverId, scientificName, commonName, family,
+              height, diameter, latitude, longitude, notes,
+              photos, status, approvalStatus, createdAt
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+              serverId = excluded.serverId,
+              scientificName = excluded.scientificName,
+              commonName = excluded.commonName,
+              family = excluded.family,
+              height = excluded.height,
+              diameter = excluded.diameter,
+              latitude = excluded.latitude,
+              longitude = excluded.longitude,
+              notes = excluded.notes,
+              photos = excluded.photos,
+              approvalStatus = excluded.approvalStatus`,
+            [
+              `cloud-${serverId}`,
+              serverId,
+              fields.scientificName,
+              fields.commonName,
+              fields.family,
+              fields.height,
+              fields.diameter,
+              fields.latitude,
+              fields.longitude,
+              fields.notes,
+              fields.photos,
+              'synced',
+              'Approved',
+              plant.created_at || new Date().toISOString(),
+            ]
+          );
+          changed = true;
+          continue;
+        }
+
+        const unchanged =
+          existing.scientificName === fields.scientificName &&
+          existing.commonName === fields.commonName &&
+          existing.family === fields.family &&
+          existing.height === fields.height &&
+          existing.diameter === fields.diameter &&
+          existing.latitude === fields.latitude &&
+          existing.longitude === fields.longitude &&
+          existing.notes === fields.notes &&
+          existing.photos === fields.photos &&
+          existing.approvalStatus === 'Approved';
+
+        if (!unchanged) {
+          await db.runAsync(
+            `UPDATE plants SET
+              scientificName = ?, commonName = ?, family = ?, height = ?,
+              diameter = ?, latitude = ?, longitude = ?, notes = ?,
+              photos = ?, approvalStatus = ?
+            WHERE id = ?`,
+            [
+              fields.scientificName,
+              fields.commonName,
+              fields.family,
+              fields.height,
+              fields.diameter,
+              fields.latitude,
+              fields.longitude,
+              fields.notes,
+              fields.photos,
+              'Approved',
+              existing.id,
+            ]
+          );
+          changed = true;
+        }
+      }
+
+      // Only refresh the screens when something really changed.
+      if (changed) {
+        const rows = await db.getAllAsync(
+          'SELECT * FROM plants ORDER BY createdAt DESC'
+        );
+
+        setRecords(
+          rows.map((r) => ({
+            ...r,
+            photos: JSON.parse(r.photos || '[]'),
+          }))
+        );
+      }
+    } finally {
+      approvedSyncRunningRef.current = false;
+    }
+  };
 
 
   // Temporary helper for testing.

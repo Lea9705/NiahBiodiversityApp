@@ -1,6 +1,6 @@
 // Explore: the plant records on this phone that the admin approved,
 // shown in the same card grid as the Visitor Explore page.
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,9 +13,11 @@ import {
   StatusBar,
   Keyboard,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 
 import BotanistHeader from '../components/BotanistHeader';
 import BotanistBottomNav from '../components/BotanistBottomNav';
@@ -48,7 +50,34 @@ function getPlantImage(record) {
 
 export default function ExploreScreen({ navigation }) {
   const [search, setSearch] = useState('');
-  const { records, loading } = useRecords();
+  const [refreshing, setRefreshing] = useState(false);
+  const { records, loading, syncApprovedRecords } = useRecords();
+
+  // Always call the newest version of the sync function.
+  const syncRef = useRef(syncApprovedRecords);
+  syncRef.current = syncApprovedRecords;
+
+  // Check the cloud every time Explore opens.
+  useFocusEffect(
+    useCallback(() => {
+      syncRef.current().catch((error) => {
+        console.log('Explore refresh failed:', error.message);
+      });
+    }, [])
+  );
+
+  // Pull down on the list to check the cloud right now.
+  const handleRefresh = async () => {
+    setRefreshing(true);
+
+    try {
+      await syncRef.current();
+    } catch (error) {
+      console.log('Explore refresh failed:', error.message);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const approvedRecords = useMemo(
     () => records.filter(isApproved),
@@ -249,6 +278,15 @@ export default function ExploreScreen({ navigation }) {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={FOREST.green}
+            colors={[FOREST.green]}
+            progressBackgroundColor={FOREST.card}
+          />
+        }
         ListHeaderComponent={listHeader}
         ListEmptyComponent={listEmpty}
         ListFooterComponent={<View style={styles.listFooter} />}
