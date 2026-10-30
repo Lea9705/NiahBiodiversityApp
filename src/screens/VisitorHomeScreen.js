@@ -15,17 +15,29 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import BottomNav from '../components/BottomNav';
 import BackButton from '../components/BackButton';
+import { useTheme } from '../theme/ThemeContext';
 
 const API_URL = 'http://52.62.125.146/api/plants';
 
-const COLORS = {
-  bg: '#F7F8F5',
-  surface: '#FFFFFF',
-  surfaceLight: '#E3F1E6',
-  green: '#2A7A45',
-  text: '#17261C',
-  muted: '#5E7062',
-  border: '#D3DFCF',
+const PALETTES = {
+  dark: {
+    bg: '#0B1712',
+    surface: '#14251B',
+    surfaceLight: '#1C3023',
+    green: '#B8E986',
+    text: '#F2F6EE',
+    muted: '#9BAE9F',
+    border: '#2A4031',
+  },
+  light: {
+    bg: '#F7F8F5',
+    surface: '#FFFFFF',
+    surfaceLight: '#E3F1E6',
+    green: '#2A7A45',
+    text: '#17261C',
+    muted: '#5E7062',
+    border: '#D3DFCF',
+  },
 };
 
 // The hero card keeps its deep-forest look, so its text uses fixed light colours.
@@ -36,6 +48,8 @@ const HERO = {
 };
 
 export default function VisitorHomeScreen({ navigation }) {
+  const { styles, COLORS, mode } = useStyles();
+
   const [search, setSearch] = useState('');
   const [plants, setPlants] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -114,7 +128,7 @@ export default function VisitorHomeScreen({ navigation }) {
       style={styles.container}
       edges={['top', 'left', 'right']}
     >
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} />
+      <StatusBar barStyle={mode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={COLORS.bg} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -375,7 +389,19 @@ export default function VisitorHomeScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+// Styles are rebuilt whenever the light/dark mode changes.
+function useStyles() {
+  const { mode, pick, colors } = useTheme();
+  const COLORS = PALETTES[mode];
+  const styles = useMemo(
+    () => createStyles(COLORS, pick, colors),
+    [mode]
+  );
+
+  return { COLORS, colors, styles, mode, pick };
+}
+
+const createStyles = (COLORS, pick, colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.bg,
@@ -724,7 +750,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: pick('#172C20', '#FFFFFF'),
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: 18,
@@ -754,7 +780,7 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   footer: {
-    color: '#5E7062',
+    color: pick('#627767', '#5E7062'),
     fontSize: 9,
     fontWeight: '700',
     letterSpacing: 1.3,

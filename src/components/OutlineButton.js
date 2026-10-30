@@ -1,10 +1,12 @@
 // Secondary button with a border, used next to a PrimaryButton
 // (e.g. "New plant record" next to "Scan QR tag")
-import React from 'react';
+import React, { useMemo } from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 
 export default function OutlineButton({ title, onPress, icon, style }) {
+  const { styles } = useStyles();
+
   return (
     <TouchableOpacity style={[styles.button, style]} onPress={onPress} activeOpacity={0.8}>
       {icon}
@@ -13,7 +15,18 @@ export default function OutlineButton({ title, onPress, icon, style }) {
   );
 }
 
-const styles = StyleSheet.create({
+// Styles are rebuilt whenever the light/dark mode changes.
+function useStyles() {
+  const { mode, pick, colors } = useTheme();
+  const styles = useMemo(
+    () => createStyles(null, pick, colors),
+    [mode]
+  );
+
+  return { colors, styles, mode, pick };
+}
+
+const createStyles = (_palette, pick, colors) => StyleSheet.create({
   button: {
     backgroundColor: colors.surfaceAlt,
     borderWidth: 0.5,

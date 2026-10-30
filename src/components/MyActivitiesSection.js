@@ -15,6 +15,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useUser } from '../context/UserContext';
 import { useRecords } from '../context/RecordsContext';
 import { authFetch } from '../utils/session';
+import { useTheme } from '../theme/ThemeContext';
 
 const PLANTS_URL = 'http://52.62.125.146/api/plants';
 
@@ -25,20 +26,37 @@ const REFRESH_INTERVAL_MS = 15000;
 // the cloud list to include it.
 const UNCONFIRMED_TIMEOUT_MS = 60000;
 
-const COLORS = {
-  bg: '#F7F8F5',
-  surface: '#FFFFFF',
-  surfaceLight: '#E3F1E6',
-  green: '#2A7A45',
-  text: '#17261C',
-  muted: '#5E7062',
-  border: '#D3DFCF',
-  success: '#2A7A45',
-  successBg: '#E8F5EB',
-  warning: '#8A5A00',
-  warningBg: '#FBEED0',
-  error: '#B3392F',
-  errorBg: '#FCE9E7',
+const PALETTES = {
+  dark: {
+    bg: '#0B1712',
+    surface: '#14251B',
+    surfaceLight: '#1C3023',
+    green: '#B8E986',
+    text: '#F2F6EE',
+    muted: '#9BAE9F',
+    border: '#2A4031',
+    success: '#B8E986',
+    successBg: '#203B2A',
+    warning: '#F2C879',
+    warningBg: '#3B3020',
+    error: '#F08C86',
+    errorBg: '#3B2322',
+  },
+  light: {
+    bg: '#F7F8F5',
+    surface: '#FFFFFF',
+    surfaceLight: '#E3F1E6',
+    green: '#2A7A45',
+    text: '#17261C',
+    muted: '#5E7062',
+    border: '#D3DFCF',
+    success: '#2A7A45',
+    successBg: '#E8F5EB',
+    warning: '#8A5A00',
+    warningBg: '#FBEED0',
+    error: '#B3392F',
+    errorBg: '#FCE9E7',
+  },
 };
 
 const FILTERS = ['All', 'Pending', 'Approved', 'Rejected'];
@@ -80,13 +98,13 @@ function getStatusIcon(status) {
   return 'time-outline';
 }
 
-function getStatusColor(status) {
+function getStatusColor(status, COLORS) {
   if (status === 'Approved') return COLORS.success;
   if (status === 'Rejected') return COLORS.error;
   return COLORS.warning;
 }
 
-function getStatusBackground(status) {
+function getStatusBackground(status, COLORS) {
   if (status === 'Approved') return COLORS.successBg;
   if (status === 'Rejected') return COLORS.errorBg;
   return COLORS.warningBg;
@@ -180,6 +198,8 @@ function mergeUnconfirmed(cloudItems, unconfirmed, now) {
 }
 
 export default function MyActivitiesSection() {
+  const { styles, COLORS } = useStyles();
+
   const navigation = useNavigation();
   const { user } = useUser();
   const userId = user?.id;
@@ -525,7 +545,7 @@ export default function MyActivitiesSection() {
       {/* List */}
       {showList
         ? filteredActivities.map((item) => {
-            const statusColor = getStatusColor(item.status);
+            const statusColor = getStatusColor(item.status, COLORS);
 
             return (
               <TouchableOpacity
@@ -537,7 +557,7 @@ export default function MyActivitiesSection() {
                 <View
                   style={[
                     styles.iconContainer,
-                    { backgroundColor: getStatusBackground(item.status) },
+                    { backgroundColor: getStatusBackground(item.status, COLORS) },
                   ]}
                 >
                   <Ionicons
@@ -570,7 +590,7 @@ export default function MyActivitiesSection() {
                   <View
                     style={[
                       styles.statusBadge,
-                      { backgroundColor: getStatusBackground(item.status) },
+                      { backgroundColor: getStatusBackground(item.status, COLORS) },
                     ]}
                   >
                     <Text style={[styles.statusBadgeText, { color: statusColor }]}>
@@ -592,7 +612,19 @@ export default function MyActivitiesSection() {
   );
 }
 
-const styles = StyleSheet.create({
+// Styles are rebuilt whenever the light/dark mode changes.
+function useStyles() {
+  const { mode, pick, colors } = useTheme();
+  const COLORS = PALETTES[mode];
+  const styles = useMemo(
+    () => createStyles(COLORS, pick, colors),
+    [mode]
+  );
+
+  return { COLORS, colors, styles, mode, pick };
+}
+
+const createStyles = (COLORS, pick, colors) => StyleSheet.create({
   section: {
     marginTop: 6,
   },
@@ -630,7 +662,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E3CD94',
+    borderColor: pick('#57472C', '#E3CD94'),
     backgroundColor: COLORS.warningBg,
   },
 
@@ -740,7 +772,7 @@ const styles = StyleSheet.create({
   },
 
   filterTextActive: {
-    color: '#FFFFFF',
+    color: COLORS.bg,
     fontWeight: '900',
   },
 

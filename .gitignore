@@ -12,3 +12,5 @@ web-build/
 .DS_Store
 Expo-Go-57.0.9.tar.app/
 .env
+node_modules_old/
+install-log.txt

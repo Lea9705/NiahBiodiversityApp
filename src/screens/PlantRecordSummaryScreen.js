@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,19 +15,34 @@ import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
 import { useRecords } from '../context/RecordsContext';
 import BackButton from '../components/BackButton';
+import { useTheme } from '../theme/ThemeContext';
 
-const COLORS = {
-  bg: '#F7F8F5',
-  surface: '#FFFFFF',
-  surfaceLight: '#E3F1E6',
-  green: '#2A7A45',
-  text: '#17261C',
-  muted: '#5E7062',
-  border: '#D3DFCF',
-  white: '#FFFFFF',
+const PALETTES = {
+  dark: {
+    bg: '#0B1712',
+    surface: '#14251B',
+    surfaceLight: '#1C3023',
+    green: '#B8E986',
+    text: '#F2F6EE',
+    muted: '#9BAE9F',
+    border: '#2A4031',
+    white: '#FFFFFF',
+  },
+  light: {
+    bg: '#F7F8F5',
+    surface: '#FFFFFF',
+    surfaceLight: '#E3F1E6',
+    green: '#2A7A45',
+    text: '#17261C',
+    muted: '#5E7062',
+    border: '#D3DFCF',
+    white: '#FFFFFF',
+  },
 };
 
 export default function PlantRecordSummaryScreen({ navigation, route }) {
+  const { styles, COLORS, mode } = useStyles();
+
   const { record, readOnly } = route.params;
   const { addRecord } = useRecords();
 
@@ -88,7 +103,7 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar
-        barStyle="dark-content"
+        barStyle={mode === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={COLORS.bg}
       />
 
@@ -454,6 +469,8 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
 }
 
 function SectionHeading({ icon, title, subtitle }) {
+  const { styles, COLORS } = useStyles();
+
   return (
     <View style={styles.sectionHeading}>
       <View style={styles.sectionIcon}>
@@ -470,6 +487,8 @@ function SectionHeading({ icon, title, subtitle }) {
 }
 
 function InfoRow({ icon, label, value }) {
+  const { styles, COLORS } = useStyles();
+
   return (
     <View style={styles.infoRow}>
       {icon ? (
@@ -486,7 +505,19 @@ function InfoRow({ icon, label, value }) {
   );
 }
 
-const styles = StyleSheet.create({
+// Styles are rebuilt whenever the light/dark mode changes.
+function useStyles() {
+  const { mode, pick, colors } = useTheme();
+  const COLORS = PALETTES[mode];
+  const styles = useMemo(
+    () => createStyles(COLORS, pick, colors),
+    [mode]
+  );
+
+  return { COLORS, colors, styles, mode, pick };
+}
+
+const createStyles = (COLORS, pick, colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.bg,
@@ -636,7 +667,7 @@ const styles = StyleSheet.create({
     width: 29,
     height: 29,
     borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    backgroundColor: pick('#0B1712DD', 'rgba(255, 255, 255, 0.92)'),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -897,7 +928,7 @@ const styles = StyleSheet.create({
   },
 
   footer: {
-    color: '#5E7062',
+    color: pick('#627767', '#5E7062'),
     fontSize: 9,
     fontWeight: '700',
     letterSpacing: 1.2,

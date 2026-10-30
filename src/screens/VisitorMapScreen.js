@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,19 +12,30 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
 import BottomNav from '../components/BottomNav';
+import { useTheme } from '../theme/ThemeContext';
 
 const API_URL = 'http://52.62.125.146/api/plants';
 
-const FOREST = {
-  background: '#F7F8F5',
-  card: '#FFFFFF',
-  border: '#D3DFCF',
-  green: '#2A7A45',
-  text: '#17261C',
-  secondary: '#4D6052',
-  muted: '#5F7164',
+const PALETTES = {
+  dark: {
+    background: '#101810',
+    card: '#192419',
+    border: '#2A3829',
+    green: '#A8D96B',
+    text: '#F2F5EB',
+    secondary: '#A7B3A0',
+    muted: '#71806D',
+  },
+  light: {
+    background: '#F7F8F5',
+    card: '#FFFFFF',
+    border: '#D3DFCF',
+    green: '#2A7A45',
+    text: '#17261C',
+    secondary: '#4D6052',
+    muted: '#5F7164',
+  },
 };
 
 const NIAH_REGION = {
@@ -35,6 +46,8 @@ const NIAH_REGION = {
 };
 
 export default function VisitorMapScreen({ navigation }) {
+  const { styles, FOREST, mode, pick } = useStyles();
+
   const [plants, setPlants] = useState([]);
   const [selectedPlant, setSelectedPlant] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
@@ -143,7 +156,7 @@ export default function VisitorMapScreen({ navigation }) {
       edges={['top', 'left', 'right']}
     >
       <StatusBar
-        barStyle="dark-content"
+        barStyle={mode === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={FOREST.background}
       />
 
@@ -203,7 +216,7 @@ export default function VisitorMapScreen({ navigation }) {
                         <Ionicons
                             name="leaf"
                             size={17}
-                            color="#FFFFFF"
+                            color={pick('#101810', '#FFFFFF')}
                         />
                     </View>
                 </Marker>
@@ -320,7 +333,19 @@ export default function VisitorMapScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+// Styles are rebuilt whenever the light/dark mode changes.
+function useStyles() {
+  const { mode, pick, colors } = useTheme();
+  const FOREST = PALETTES[mode];
+  const styles = useMemo(
+    () => createStyles(FOREST, pick, colors),
+    [mode]
+  );
+
+  return { FOREST, colors, styles, mode, pick };
+}
+
+const createStyles = (FOREST, pick, colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: FOREST.background,
@@ -341,7 +366,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E3F1E6',
+    backgroundColor: pick('#243B19', '#E3F1E6'),
   },
 
   headingText: {
@@ -420,7 +445,7 @@ const styles = StyleSheet.create({
 
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(247,248,245,0.92)',
+    backgroundColor: pick('rgba(16,24,16,0.88)', 'rgba(247,248,245,0.92)'),
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
@@ -493,7 +518,7 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E3F1E6',
+    backgroundColor: pick('#243B19', '#E3F1E6'),
   },
 
   selectedInfo: {

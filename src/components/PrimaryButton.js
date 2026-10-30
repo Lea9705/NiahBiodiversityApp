@@ -1,10 +1,12 @@
 // Solid light button with dark text - used for the main action on a screen
 // (Log in, Save record offline, Scan QR tag, etc.)
-import React from 'react';
+import React, { useMemo } from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 
 export default function PrimaryButton({ title, onPress, icon, style }) {
+  const { styles } = useStyles();
+
   return (
     <TouchableOpacity style={[styles.button, style]} onPress={onPress} activeOpacity={0.8}>
       {icon}
@@ -13,7 +15,18 @@ export default function PrimaryButton({ title, onPress, icon, style }) {
   );
 }
 
-const styles = StyleSheet.create({
+// Styles are rebuilt whenever the light/dark mode changes.
+function useStyles() {
+  const { mode, pick, colors } = useTheme();
+  const styles = useMemo(
+    () => createStyles(null, pick, colors),
+    [mode]
+  );
+
+  return { colors, styles, mode, pick };
+}
+
+const createStyles = (_palette, pick, colors) => StyleSheet.create({
   button: {
     backgroundColor: colors.buttonBg,
     borderRadius: 8,

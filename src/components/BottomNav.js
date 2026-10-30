@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 
 export default function BottomNav({
   items,
@@ -15,6 +15,8 @@ export default function BottomNav({
   onPress,
   variant = 'default',
 }) {
+  const { styles, colors } = useStyles();
+
   const botanist = variant === 'botanist';
 
   return (
@@ -56,7 +58,18 @@ export default function BottomNav({
   );
 }
 
-const styles = StyleSheet.create({
+// Styles are rebuilt whenever the light/dark mode changes.
+function useStyles() {
+  const { mode, pick, colors } = useTheme();
+  const styles = useMemo(
+    () => createStyles(null, pick, colors),
+    [mode]
+  );
+
+  return { colors, styles, mode, pick };
+}
+
+const createStyles = (_palette, pick, colors) => StyleSheet.create({
   nav: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -90,7 +103,7 @@ const styles = StyleSheet.create({
     marginTop: 0,
     paddingTop: 8,
     paddingBottom: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: pick('#071711', '#FFFFFF'),
     marginBottom: 8,
   },
 });

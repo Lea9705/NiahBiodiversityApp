@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { useRecords } from '../context/RecordsContext';
+import { useTheme } from '../theme/ThemeContext';
 
 const API_URL = 'http://52.62.125.146/api/plants';
 
@@ -35,6 +36,8 @@ function normalizeLocalPlant(record) {
 }
 
 export default function PlantDetailScreen({ route }) {
+  const { styles, pick } = useStyles();
+
   const { plantId, plant: passedPlant } = route.params || {};
   const { records, loading: recordsLoading } = useRecords();
 
@@ -127,7 +130,7 @@ export default function PlantDetailScreen({ route }) {
   if (loading || recordsLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#287A45" />
+        <ActivityIndicator size="large" color={pick('#A8D96B', '#287A45')} />
         <Text style={styles.message}>Loading plant details...</Text>
       </View>
     );
@@ -229,6 +232,8 @@ export default function PlantDetailScreen({ route }) {
 }
 
 function InfoRow({ label, value }) {
+  const { styles } = useStyles();
+
   return (
     <View style={styles.infoRow}>
       <Text style={styles.infoLabel}>{label}</Text>
@@ -237,10 +242,21 @@ function InfoRow({ label, value }) {
   );
 }
 
-const styles = StyleSheet.create({
+// Styles are rebuilt whenever the light/dark mode changes.
+function useStyles() {
+  const { mode, pick, colors } = useTheme();
+  const styles = useMemo(
+    () => createStyles(null, pick, colors),
+    [mode]
+  );
+
+  return { colors, styles, mode, pick };
+}
+
+const createStyles = (_palette, pick, colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7F8F5',
+    backgroundColor: pick('#101810', '#F7F8F5'),
   },
   content: {
     padding: 20,
@@ -251,36 +267,36 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: '#F7F8F5',
+    backgroundColor: pick('#101810', '#F7F8F5'),
   },
   title: {
     fontSize: 25,
     fontWeight: 'bold',
-    color: '#214D32',
+    color: pick('#A8D96B', '#214D32'),
     marginBottom: 6,
   },
   scientific: {
     fontSize: 16,
     fontStyle: 'italic',
-    color: '#666666',
+    color: pick('#A7B3A0', '#666666'),
     marginBottom: 12,
   },
   statusBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#E1F2E5',
+    backgroundColor: pick('#243B19', '#E1F2E5'),
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 6,
     marginBottom: 22,
   },
   statusText: {
-    color: '#24683A',
+    color: pick('#A8D96B', '#24683A'),
     fontWeight: '600',
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#214D32',
+    color: pick('#A8D96B', '#214D32'),
     marginTop: 16,
     marginBottom: 12,
   },
@@ -289,42 +305,42 @@ const styles = StyleSheet.create({
     height: 180,
     borderRadius: 12,
     marginRight: 12,
-    backgroundColor: '#E5E5E5',
+    backgroundColor: pick('#2A3829', '#E5E5E5'),
   },
   noPhoto: {
     padding: 18,
     borderRadius: 10,
-    backgroundColor: '#EEEEEA',
+    backgroundColor: pick('#222F20', '#EEEEEA'),
   },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E5DF',
+    borderBottomColor: pick('#2A3829', '#E2E5DF'),
     gap: 16,
   },
   infoLabel: {
     flex: 1,
-    color: '#666666',
+    color: pick('#A7B3A0', '#666666'),
     fontSize: 14,
   },
   infoValue: {
     flex: 1,
-    color: '#222222',
+    color: pick('#F2F5EB', '#222222'),
     fontSize: 14,
     textAlign: 'right',
   },
   notes: {
     fontSize: 15,
     lineHeight: 23,
-    color: '#333333',
-    backgroundColor: '#FFFFFF',
+    color: pick('#E0E6D8', '#333333'),
+    backgroundColor: pick('#192419', '#FFFFFF'),
     padding: 14,
     borderRadius: 10,
   },
   message: {
-    color: '#666666',
+    color: pick('#A7B3A0', '#666666'),
     textAlign: 'center',
     lineHeight: 22,
     marginTop: 8,
@@ -332,7 +348,7 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#9B3030',
+    color: pick('#F08C86', '#9B3030'),
     textAlign: 'center',
   },
 });

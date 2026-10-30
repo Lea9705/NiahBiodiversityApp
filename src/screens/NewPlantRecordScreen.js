@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -23,22 +23,40 @@ import StyledInput from '../components/StyledInput';
 import PrimaryButton from '../components/PrimaryButton';
 import BackButton from '../components/BackButton';
 import { useRecords } from '../context/RecordsContext';
+import { useTheme } from '../theme/ThemeContext';
 
-const COLORS = {
-  bg: '#F7F8F5',
-  surface: '#FFFFFF',
-  surfaceLight: '#E3F1E6',
-  green: '#2A7A45',
-  text: '#17261C',
-  muted: '#5E7062',
-  border: '#D3DFCF',
-  white: '#FFFFFF',
-  successBg: '#E8F5EB',
-  warningBg: '#FBEED0',
-  warning: '#8A5A00',
+const PALETTES = {
+  dark: {
+    bg: '#0B1712',
+    surface: '#14251B',
+    surfaceLight: '#1C3023',
+    green: '#B8E986',
+    text: '#F2F6EE',
+    muted: '#9BAE9F',
+    border: '#2A4031',
+    white: '#FFFFFF',
+    successBg: '#203B2A',
+    warningBg: '#3B3020',
+    warning: '#F2C879',
+  },
+  light: {
+    bg: '#F7F8F5',
+    surface: '#FFFFFF',
+    surfaceLight: '#E3F1E6',
+    green: '#2A7A45',
+    text: '#17261C',
+    muted: '#5E7062',
+    border: '#D3DFCF',
+    white: '#FFFFFF',
+    successBg: '#E8F5EB',
+    warningBg: '#FBEED0',
+    warning: '#8A5A00',
+  },
 };
 
 export default function NewPlantRecordScreen({ navigation }) {
+  const { styles, COLORS, mode } = useStyles();
+
   const { isOnline, records } = useRecords();
 
   const pendingCount = records.filter(
@@ -209,7 +227,7 @@ export default function NewPlantRecordScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar
-        barStyle="dark-content"
+        barStyle={mode === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={COLORS.bg}
       />
 
@@ -568,6 +586,8 @@ export default function NewPlantRecordScreen({ navigation }) {
 }
 
 function SectionHeading({ icon, title, subtitle }) {
+  const { styles, COLORS } = useStyles();
+
   return (
     <View style={styles.sectionHeading}>
       <View style={styles.sectionIcon}>
@@ -584,7 +604,19 @@ function SectionHeading({ icon, title, subtitle }) {
   );
 }
 
-const styles = StyleSheet.create({
+// Styles are rebuilt whenever the light/dark mode changes.
+function useStyles() {
+  const { mode, pick, colors } = useTheme();
+  const COLORS = PALETTES[mode];
+  const styles = useMemo(
+    () => createStyles(COLORS, pick, colors),
+    [mode]
+  );
+
+  return { COLORS, colors, styles, mode, pick };
+}
+
+const createStyles = (COLORS, pick, colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.bg,
@@ -659,7 +691,7 @@ const styles = StyleSheet.create({
 
   badgeOffline: {
     backgroundColor: COLORS.warningBg,
-    borderColor: '#E3CD94',
+    borderColor: pick('#57472C', '#E3CD94'),
   },
 
   statusText: {
@@ -787,7 +819,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
     paddingVertical: 4,
     borderRadius: 7,
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    backgroundColor: pick('#0B1712DD', 'rgba(255, 255, 255, 0.92)'),
   },
 
   photoNumberText: {
@@ -942,7 +974,7 @@ const styles = StyleSheet.create({
   },
 
   footer: {
-    color: '#5E7062',
+    color: pick('#627767', '#5E7062'),
     fontSize: 9,
     fontWeight: '700',
     letterSpacing: 1.2,

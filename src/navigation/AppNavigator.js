@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import RoleSelectScreen from '../screens/RoleSelectScreen';
 import BotanistLoginScreen from '../screens/BotanistLoginScreen';
@@ -11,15 +11,30 @@ import NewPlantRecordScreen from '../screens/NewPlantRecordScreen';
 import PlantRecordSummaryScreen from '../screens/PlantRecordSummaryScreen';
 import PlantDetailScreen from '../screens/PlantDetailScreen';
 import BotanistProfileScreen from '../screens/BotanistProfileScreen';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import ScanQRScreen from '../screens/ScanQRScreen';
 import ExploreScreen from '../screens/ExploreScreen';
 
 const Stack = createStackNavigator();
 
 export default function AppNavigator() {
+  const { isDark, colors } = useTheme();
+
+  // Keeps the screen background and the transitions in the current theme.
+  const navigationTheme = {
+    ...DefaultTheme,
+    dark: isDark,
+    colors: {
+      ...DefaultTheme.colors,
+      background: colors.bg,
+      card: colors.surface,
+      text: colors.textPrimary,
+      border: colors.border,
+    },
+  };
+
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={navigationTheme}>
       <Stack.Navigator
         initialRouteName="RoleSelect"
         screenOptions={{

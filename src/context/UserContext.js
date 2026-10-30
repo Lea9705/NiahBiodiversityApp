@@ -17,9 +17,20 @@ const LOGIN_URL = 'http://52.62.125.146/api/login';
 const TOKEN_KEY = 'authToken';
 const USER_KEY = 'authUser';
 
-// Only these roles may use the mobile botanist app (compared in lower case).
-// Add 'admin' to the list if you want admin accounts to log in for testing.
-const ALLOWED_ROLES = ['botanist'];
+// Only these roles may log in to the app (compared in lower case).
+// Any other role, such as an officer, is treated like a wrong login.
+const ALLOWED_ROLES = ['botanist', 'admin'];
+
+const INVALID_LOGIN_MESSAGE =
+  'Invalid login credentials, please check your email address or password.';
+
+// Every kind of wrong login gets this same sentence, so the app never reveals
+// whether an email exists, is suspended, or belongs to another role.
+function invalidLogin() {
+  const error = new Error(INVALID_LOGIN_MESSAGE);
+  error.code = 'INVALID_CREDENTIALS';
+  return error;
+}
 
 async function requestLogin(email, password) {
   const controller = new AbortController();
@@ -59,14 +70,8 @@ async function requestLogin(email, password) {
   if (!response.ok) {
     const serverMessage = typeof data?.error === 'string' ? data.error : '';
 
-    if (response.status === 400) {
-      throw new Error(serverMessage || 'Please enter your email and password.');
-    }
-    if (response.status === 401) {
-      throw new Error(serverMessage || 'Invalid email or password.');
-    }
-    if (response.status === 403) {
-      throw new Error(serverMessage || 'This account is not allowed to log in.');
+    if (response.status === 400 || response.status === 401 || response.status === 403) {
+      throw invalidLogin();
     }
     if (response.status === 429) {
       throw new Error('Too many attempts. Please wait a moment and try again.');
@@ -107,11 +112,7 @@ export function UserProvider({ children }) {
     const role = String(result.user.role || '').trim().toLowerCase();
 
     if (!ALLOWED_ROLES.includes(role)) {
-      throw new Error(
-        `This app is for Botanist accounts. Your account role is ${
-          result.user.role || 'unknown'
-        }.`
-      );
+      throw invalidLogin();
     }
 
     // Save to secure storage first, so screens that read it find the login

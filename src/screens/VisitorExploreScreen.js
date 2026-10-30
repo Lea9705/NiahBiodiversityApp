@@ -13,20 +13,32 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
 import BottomNav from '../components/BottomNav';
+import { useTheme } from '../theme/ThemeContext';
 
 const API_URL = 'http://52.62.125.146/api/plants';
 
-const FOREST = {
-  background: '#F7F8F5',
-  card: '#FFFFFF',
-  cardBorder: '#D3DFCF',
-  green: '#2A7A45',
-  greenDark: '#E3F1E6',
-  text: '#17261C',
-  secondary: '#4D6052',
-  muted: '#5F7164',
+const PALETTES = {
+  dark: {
+    background: '#101810',
+    card: '#192419',
+    cardBorder: '#2A3829',
+    green: '#A8D96B',
+    greenDark: '#243B19',
+    text: '#F2F5EB',
+    secondary: '#A7B3A0',
+    muted: '#71806D',
+  },
+  light: {
+    background: '#F7F8F5',
+    card: '#FFFFFF',
+    cardBorder: '#D3DFCF',
+    green: '#2A7A45',
+    greenDark: '#E3F1E6',
+    text: '#17261C',
+    secondary: '#4D6052',
+    muted: '#5F7164',
+  },
 };
 
 // The hero card keeps its deep-forest look, so its text uses fixed light colours.
@@ -37,6 +49,8 @@ const HERO = {
 };
 
 export default function VisitorExploreScreen({ navigation }) {
+  const { styles, FOREST, mode } = useStyles();
+
   const [plants, setPlants] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -188,7 +202,7 @@ export default function VisitorExploreScreen({ navigation }) {
       style={styles.container}
       edges={['top', 'left', 'right']}
     >
-      <StatusBar barStyle="dark-content" backgroundColor={FOREST.background} />
+      <StatusBar barStyle={mode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={FOREST.background} />
 
       <FlatList
         key="plant-grid"
@@ -396,7 +410,19 @@ export default function VisitorExploreScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+// Styles are rebuilt whenever the light/dark mode changes.
+function useStyles() {
+  const { mode, pick, colors } = useTheme();
+  const FOREST = PALETTES[mode];
+  const styles = useMemo(
+    () => createStyles(FOREST, pick, colors),
+    [mode]
+  );
+
+  return { FOREST, colors, styles, mode, pick };
+}
+
+const createStyles = (FOREST, pick, colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: FOREST.background,
@@ -664,7 +690,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E3EEE1',
+    backgroundColor: pick('#20351A', '#E3EEE1'),
   },
 
   placeholderText: {
@@ -688,9 +714,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    backgroundColor: pick('rgba(16, 24, 16, 0.88)', 'rgba(255, 255, 255, 0.92)'),
     borderWidth: 1,
-    borderColor: '#CFE0CB',
+    borderColor: pick('#3A5131', '#CFE0CB'),
   },
 
   plantInfo: {

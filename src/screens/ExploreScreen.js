@@ -22,17 +22,31 @@ import { useFocusEffect } from '@react-navigation/native';
 import BotanistHeader from '../components/BotanistHeader';
 import BotanistBottomNav from '../components/BotanistBottomNav';
 import { useRecords } from '../context/RecordsContext';
+import { useTheme } from '../theme/ThemeContext';
 
-const FOREST = {
-  background: '#F7F8F5',
-  card: '#FFFFFF',
-  cardBorder: '#D3DFCF',
-  green: '#2A7A45',
-  greenDark: '#E3F1E6',
-  placeholderBg: '#E3EEE1',
-  text: '#17261C',
-  secondary: '#4D6052',
-  muted: '#5F7164',
+const PALETTES = {
+  dark: {
+    background: '#0B1712',
+    card: '#14251B',
+    cardBorder: '#2A4031',
+    green: '#B8E986',
+    greenDark: '#1C3023',
+    placeholderBg: '#20351A',
+    text: '#F2F6EB',
+    secondary: '#9BAE9F',
+    muted: '#71806D',
+  },
+  light: {
+    background: '#F7F8F5',
+    card: '#FFFFFF',
+    cardBorder: '#D3DFCF',
+    green: '#2A7A45',
+    greenDark: '#E3F1E6',
+    placeholderBg: '#E3EEE1',
+    text: '#17261C',
+    secondary: '#4D6052',
+    muted: '#5F7164',
+  },
 };
 
 const isApproved = (record) =>
@@ -49,6 +63,8 @@ function getPlantImage(record) {
 }
 
 export default function ExploreScreen({ navigation }) {
+  const { styles, FOREST, mode } = useStyles();
+
   const [search, setSearch] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const { records, loading, syncApprovedRecords } = useRecords();
@@ -266,7 +282,7 @@ export default function ExploreScreen({ navigation }) {
       style={styles.container}
       edges={['top', 'left', 'right']}
     >
-      <StatusBar barStyle="dark-content" backgroundColor={FOREST.background} />
+      <StatusBar barStyle={mode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={FOREST.background} />
 
       <FlatList
         key="plant-grid"
@@ -297,7 +313,19 @@ export default function ExploreScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+// Styles are rebuilt whenever the light/dark mode changes.
+function useStyles() {
+  const { mode, pick, colors } = useTheme();
+  const FOREST = PALETTES[mode];
+  const styles = useMemo(
+    () => createStyles(FOREST, pick, colors),
+    [mode]
+  );
+
+  return { FOREST, colors, styles, mode, pick };
+}
+
+const createStyles = (FOREST, pick, colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: FOREST.background,
@@ -473,9 +501,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    backgroundColor: pick('rgba(11, 23, 18, 0.88)', 'rgba(255, 255, 255, 0.92)'),
     borderWidth: 1,
-    borderColor: '#CFE0CB',
+    borderColor: pick('#3A5131', '#CFE0CB'),
   },
 
   plantInfo: {

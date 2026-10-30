@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,16 +9,18 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 
 export default function RoleSelectScreen({ navigation }) {
+  const { styles, mode, pick } = useStyles();
+
   return (
     <ImageBackground
       source={require('../../assets/images/niah-background.jpg')}
       style={styles.container}
       resizeMode="cover"
     >
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={mode === 'dark' ? 'light-content' : 'dark-content'} />
 
       <View style={styles.overlay}>
         <SafeAreaView style={styles.safeArea}>
@@ -29,7 +31,7 @@ export default function RoleSelectScreen({ navigation }) {
                 <Ionicons
                   name="leaf-outline"
                   size={44}
-                  color="#2A7A45"
+                  color={pick('#8BD66D', '#2A7A45')}
                 />
               </View>
 
@@ -57,7 +59,7 @@ export default function RoleSelectScreen({ navigation }) {
                   <Ionicons
                     name="clipboard-outline"
                     size={27}
-                    color="#1F6FB0"
+                    color={pick('#55B8FF', '#1F6FB0')}
                   />
                 </View>
 
@@ -74,7 +76,7 @@ export default function RoleSelectScreen({ navigation }) {
                 <Ionicons
                   name="chevron-forward"
                   size={22}
-                  color="#6B7D6F"
+                  color={pick('#B6C1B8', '#6B7D6F')}
                 />
               </TouchableOpacity>
 
@@ -89,7 +91,7 @@ export default function RoleSelectScreen({ navigation }) {
                   <Ionicons
                     name="location-outline"
                     size={27}
-                    color="#2A7A45"
+                    color={pick('#8BD66D', '#2A7A45')}
                   />
                 </View>
 
@@ -106,7 +108,7 @@ export default function RoleSelectScreen({ navigation }) {
                 <Ionicons
                   name="chevron-forward"
                   size={22}
-                  color="#6B7D6F"
+                  color={pick('#B6C1B8', '#6B7D6F')}
                 />
               </TouchableOpacity>
             </View>
@@ -116,7 +118,7 @@ export default function RoleSelectScreen({ navigation }) {
               <Ionicons
                 name="leaf-outline"
                 size={14}
-                color="#5E7062"
+                color={pick('#91B79A', '#5E7062')}
               />
               <Text style={styles.footerText}>
                 DISCOVER · DOCUMENT · CONSERVE
@@ -129,15 +131,26 @@ export default function RoleSelectScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+// Styles are rebuilt whenever the light/dark mode changes.
+function useStyles() {
+  const { mode, pick, colors } = useTheme();
+  const styles = useMemo(
+    () => createStyles(null, pick, colors),
+    [mode]
+  );
+
+  return { colors, styles, mode, pick };
+}
+
+const createStyles = (_palette, pick, colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#EAF0E8',
+    backgroundColor: pick('#101711', '#EAF0E8'),
   },
 
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(247, 248, 245, 0.84)',
+    backgroundColor: pick('rgba(5, 12, 8, 0.66)', 'rgba(247, 248, 245, 0.84)'),
   },
 
   safeArea: {
@@ -160,9 +173,9 @@ const styles = StyleSheet.create({
     width: 92,
     height: 92,
     borderRadius: 28,
-    backgroundColor: '#E3F1E6',
+    backgroundColor: pick('#193719', '#E3F1E6'),
     borderWidth: 1,
-    borderColor: 'rgba(42, 122, 69, 0.35)',
+    borderColor: pick('rgba(139, 214, 109, 0.45)', 'rgba(42, 122, 69, 0.35)'),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 22,
@@ -171,14 +184,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#17261C',
+    color: pick('#F5F6F0', '#17261C'),
     textAlign: 'center',
     letterSpacing: -0.7,
   },
 
   subtitle: {
     fontSize: 15,
-    color: '#4D6052',
+    color: pick('#D0D8D0', '#4D6052'),
     marginTop: 10,
     textAlign: 'center',
   },
@@ -187,7 +200,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 3,
     borderRadius: 3,
-    backgroundColor: '#2A7A45',
+    backgroundColor: pick('#78B96C', '#2A7A45'),
     marginTop: 23,
   },
 
@@ -199,9 +212,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 15,
-    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    backgroundColor: pick('rgba(22, 34, 27, 0.91)', 'rgba(255, 255, 255, 0.94)'),
     borderWidth: 1,
-    borderColor: '#CFDACB',
+    borderColor: pick('rgba(157, 190, 158, 0.48)', '#CFDACB'),
     borderRadius: 22,
     paddingVertical: 19,
     paddingHorizontal: 17,
@@ -212,7 +225,7 @@ const styles = StyleSheet.create({
     width: 62,
     height: 62,
     borderRadius: 19,
-    backgroundColor: '#E1EEF9',
+    backgroundColor: pick('#10364A', '#E1EEF9'),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -221,7 +234,7 @@ const styles = StyleSheet.create({
     width: 62,
     height: 62,
     borderRadius: 19,
-    backgroundColor: '#E3F1E6',
+    backgroundColor: pick('#1D3A1D', '#E3F1E6'),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -234,13 +247,13 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#17261C',
+    color: pick('#F4F6F0', '#17261C'),
   },
 
   cardSub: {
     fontSize: 12,
     lineHeight: 18,
-    color: '#5E7062',
+    color: pick('#B8C1B9', '#5E7062'),
   },
 
   footer: {
@@ -255,6 +268,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     letterSpacing: 1.4,
-    color: '#5E7062',
+    color: pick('#A4B9A5', '#5E7062'),
   },
 });

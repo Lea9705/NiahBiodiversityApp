@@ -2,7 +2,7 @@
 // A wrong email or password shows an error message.
 // Styled to match the Niah Biodiversity botanical theme.
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,10 +21,13 @@ import StyledInput from '../components/StyledInput';
 import PrimaryButton from '../components/PrimaryButton';
 import BackButton from '../components/BackButton';
 import { useUser } from '../context/UserContext';
+import { useTheme } from '../theme/ThemeContext';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function BotanistLoginScreen({ navigation }) {
+  const { styles, mode, pick } = useStyles();
+
   const { login } = useUser();
 
   const [email, setEmail] = useState('');
@@ -64,8 +68,15 @@ export default function BotanistLoginScreen({ navigation }) {
         routes: [{ name: 'BotanistHome' }],
       });
     } catch (error) {
-      setLoginError(error.message || 'Unable to log in. Please try again.');
       setLoading(false);
+
+      if (error.code === 'INVALID_CREDENTIALS') {
+        // One popup, one sentence, for every kind of wrong login.
+        Alert.alert('Login failed', error.message);
+        return;
+      }
+
+      setLoginError(error.message || 'Unable to log in. Please try again.');
     }
   };
 
@@ -75,7 +86,7 @@ export default function BotanistLoginScreen({ navigation }) {
       style={styles.container}
       resizeMode="cover"
     >
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={mode === 'dark' ? 'light-content' : 'dark-content'} />
 
       <View style={styles.overlay}>
         <SafeAreaView style={styles.safeArea}>
@@ -99,7 +110,7 @@ export default function BotanistLoginScreen({ navigation }) {
                   <Ionicons
                     name="clipboard-outline"
                     size={32}
-                    color="#1F6FB0"
+                    color={pick('#55B8FF', '#1F6FB0')}
                   />
                 </View>
 
@@ -111,7 +122,7 @@ export default function BotanistLoginScreen({ navigation }) {
                   <Ionicons
                     name="leaf-outline"
                     size={15}
-                    color="#2A7A45"
+                    color={pick('#8BD66D', '#2A7A45')}
                   />
                   <Text style={styles.roleBadgeText}>
                     BOTANIST ACCESS
@@ -193,7 +204,7 @@ export default function BotanistLoginScreen({ navigation }) {
                           : 'eye-outline'
                       }
                       size={19}
-                      color="#5E7062"
+                      color={pick('#A9B8AB', '#5E7062')}
                     />
 
                     <Text style={styles.passwordToggleText}>
@@ -224,7 +235,7 @@ export default function BotanistLoginScreen({ navigation }) {
                     <Ionicons
                       name="alert-circle-outline"
                       size={18}
-                      color="#B3392F"
+                      color={pick('#F08C86', '#B3392F')}
                     />
                     <Text style={styles.errorBannerText}>{loginError}</Text>
                   </View>
@@ -243,7 +254,7 @@ export default function BotanistLoginScreen({ navigation }) {
                   <Ionicons
                     name="shield-checkmark-outline"
                     size={18}
-                    color="#2A7A45"
+                    color={pick('#8BD66D', '#2A7A45')}
                   />
 
                   <Text style={styles.note}>
@@ -258,7 +269,7 @@ export default function BotanistLoginScreen({ navigation }) {
                 <Ionicons
                   name="leaf-outline"
                   size={14}
-                  color="#5E7062"
+                  color={pick('#91B79A', '#5E7062')}
                 />
 
                 <Text style={styles.footerText}>
@@ -273,15 +284,26 @@ export default function BotanistLoginScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+// Styles are rebuilt whenever the light/dark mode changes.
+function useStyles() {
+  const { mode, pick, colors } = useTheme();
+  const styles = useMemo(
+    () => createStyles(null, pick, colors),
+    [mode]
+  );
+
+  return { colors, styles, mode, pick };
+}
+
+const createStyles = (_palette, pick, colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#EAF0E8',
+    backgroundColor: pick('#101711', '#EAF0E8'),
   },
 
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(247, 248, 245, 0.88)',
+    backgroundColor: pick('rgba(5, 12, 8, 0.76)', 'rgba(247, 248, 245, 0.88)'),
   },
 
   safeArea: {
@@ -316,9 +338,9 @@ const styles = StyleSheet.create({
     width: 78,
     height: 78,
     borderRadius: 25,
-    backgroundColor: '#E1EEF9',
+    backgroundColor: pick('#10364A', '#E1EEF9'),
     borderWidth: 1,
-    borderColor: 'rgba(31, 111, 176, 0.35)',
+    borderColor: pick('rgba(85, 184, 255, 0.45)', 'rgba(31, 111, 176, 0.35)'),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 17,
@@ -327,7 +349,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 13,
     lineHeight: 20,
-    color: '#4D6052',
+    color: pick('#C5D0C7', '#4D6052'),
     textAlign: 'center',
     marginTop: 7,
   },
@@ -340,8 +362,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(42, 122, 69, 0.45)',
-    backgroundColor: '#E3F1E6',
+    borderColor: pick('rgba(92, 174, 103, 0.55)', 'rgba(42, 122, 69, 0.45)'),
+    backgroundColor: pick('rgba(20, 61, 34, 0.8)', '#E3F1E6'),
     marginTop: 18,
   },
 
@@ -349,13 +371,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 1.2,
-    color: '#245F39',
+    color: pick('#A7D99A', '#245F39'),
   },
 
   formCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.96)',
+    backgroundColor: pick('rgba(20, 31, 24, 0.94)', 'rgba(255, 255, 255, 0.96)'),
     borderWidth: 1,
-    borderColor: '#D3E0D0',
+    borderColor: pick('rgba(157, 190, 158, 0.38)', '#D3E0D0'),
     borderRadius: 24,
     padding: 20,
   },
@@ -363,13 +385,13 @@ const styles = StyleSheet.create({
   formTitle: {
     fontSize: 21,
     fontWeight: '700',
-    color: '#17261C',
+    color: pick('#F5F6F0', '#17261C'),
   },
 
   formSubtitle: {
     fontSize: 12,
     lineHeight: 18,
-    color: '#5E7062',
+    color: pick('#AEBBB0', '#5E7062'),
     marginTop: 6,
     marginBottom: 22,
   },
@@ -389,7 +411,7 @@ const styles = StyleSheet.create({
 
   passwordToggleText: {
     fontSize: 12,
-    color: '#5E7062',
+    color: pick('#A9B8AB', '#5E7062'),
   },
 
   forgotButton: {
@@ -401,7 +423,7 @@ const styles = StyleSheet.create({
   forgot: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#2A7A45',
+    color: pick('#8BD66D', '#2A7A45'),
   },
 
   errorBanner: {
@@ -412,15 +434,15 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#F0BDB8',
-    backgroundColor: '#FCE9E7',
+    borderColor: pick('#713A38', '#F0BDB8'),
+    backgroundColor: pick('#251B19', '#FCE9E7'),
   },
 
   errorBannerText: {
     flex: 1,
     fontSize: 12,
     lineHeight: 18,
-    color: '#8E2B23',
+    color: pick('#F5B8B3', '#8E2B23'),
   },
 
   loginButton: {
@@ -436,7 +458,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 10,
     borderTopWidth: 1,
-    borderTopColor: '#DDE6DA',
+    borderTopColor: pick('rgba(157, 190, 158, 0.2)', '#DDE6DA'),
     paddingTop: 16,
   },
 
@@ -444,7 +466,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 11,
     lineHeight: 17,
-    color: '#5E7062',
+    color: pick('#B8C4B9', '#5E7062'),
   },
 
   footer: {
@@ -459,6 +481,6 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '600',
     letterSpacing: 1.2,
-    color: '#5E7062',
+    color: pick('#A4B9A5', '#5E7062'),
   },
 });

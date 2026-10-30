@@ -1,11 +1,13 @@
 // A single row in a list of plant records or species - icon, title,
 // subtitle, and an optional chevron for navigating to a detail screen.
-import React from 'react';
+import React, { useMemo } from 'react';
 import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 
 export default function RecordListItem({ title, subtitle, iconName, iconColor, iconBg, onPress, showChevron }) {
+  const { styles, colors } = useStyles();
+
   return (
     <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.7} disabled={!onPress}>
       <View style={[styles.iconWrap, { backgroundColor: iconBg }]}>
@@ -20,7 +22,18 @@ export default function RecordListItem({ title, subtitle, iconName, iconColor, i
   );
 }
 
-const styles = StyleSheet.create({
+// Styles are rebuilt whenever the light/dark mode changes.
+function useStyles() {
+  const { mode, pick, colors } = useTheme();
+  const styles = useMemo(
+    () => createStyles(null, pick, colors),
+    [mode]
+  );
+
+  return { colors, styles, mode, pick };
+}
+
+const createStyles = (_palette, pick, colors) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
