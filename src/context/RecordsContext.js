@@ -66,10 +66,10 @@ export function RecordsProvider({ children }) {
   }, []);
 
   // Keep the plants on this phone live with the cloud. While the phone is
-  // online and someone is logged in, check right away, then every 20 seconds,
-  // and again whenever the app comes back to the foreground.
+  // online (for visitors and for staff), check right away, then every 20
+  // seconds, and again whenever the app comes back to the foreground.
   useEffect(() => {
-    if (!isOnline || loading || !token) return;
+    if (!isOnline || loading) return;
 
     const run = () => {
       syncApprovedRecords().catch((error) => {
@@ -239,12 +239,10 @@ const updateRecordServerId = async (id, serverId) => {
     try {
       const db = await getDatabase();
 
+      // Staff send their login token. Visitors have none and ask without it.
       const authToken =
         getToken() || (await SecureStore.getItemAsync('authToken'));
-
-      if (!authToken) {
-        throw new Error('You must log in before fetching approved plant records.');
-      }
+      const isVisitorSync = !authToken;
 
       // Note which records are already linked to the cloud BEFORE asking the
       // server. A record submitted while we wait is then never mistaken for
@@ -255,8 +253,8 @@ const updateRecordServerId = async (id, serverId) => {
 
       const response = await authFetch(PLANTS_URL, {
         headers: {
-          Authorization: `Bearer ${authToken}`,
           Accept: 'application/json',
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
         },
       });
 
@@ -277,6 +275,10 @@ const updateRecordServerId = async (id, serverId) => {
       for (const row of linkedBefore) {
         const cloudPlant = cloudById.get(String(row.serverId));
         const isCloudCopy = String(row.id).startsWith('cloud-');
+
+        // A visitor only tidies the downloaded copies. A botanist's own records
+        // are never touched without a login.
+        if (isVisitorSync && !isCloudCopy) continue;
 
         if (!cloudPlant) {
           // Deleted from the cloud database, so delete it here too.

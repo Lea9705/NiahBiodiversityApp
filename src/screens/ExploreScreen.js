@@ -1,5 +1,6 @@
-// Explore: the plant records on this phone that the admin approved,
-// shown in the same card grid as the Visitor Explore page.
+// Explore: the plant records on this phone that the admin approved, in a card grid.
+// Visitors and staff share this page. Visitors also get the "The world of plants"
+// card at the top.
 import React, { useState, useMemo, useRef, useCallback } from 'react';
 import {
   View,
@@ -20,8 +21,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 
 import BotanistHeader from '../components/BotanistHeader';
-import BotanistBottomNav from '../components/BotanistBottomNav';
+import VisitorHeader from '../components/VisitorHeader';
+import AppBottomNav from '../components/AppBottomNav';
 import { useRecords } from '../context/RecordsContext';
+import { useUser } from '../context/UserContext';
 import { useTheme } from '../theme/ThemeContext';
 
 const PALETTES = {
@@ -49,6 +52,13 @@ const PALETTES = {
   },
 };
 
+// The hero card keeps its deep-forest look in both themes.
+const HERO = {
+  text: '#F2F5EB',
+  green: '#A8D96B',
+  secondary: '#A7B3A0',
+};
+
 const isApproved = (record) =>
   String(record.approvalStatus || '').trim().toLowerCase() === 'approved';
 
@@ -68,6 +78,10 @@ export default function ExploreScreen({ navigation }) {
   const [search, setSearch] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const { records, loading, syncApprovedRecords } = useRecords();
+
+  // Someone who has not logged in is a visitor.
+  const { isLoggedIn } = useUser();
+  const isVisitor = !isLoggedIn;
 
   // Always call the newest version of the sync function.
   const syncRef = useRef(syncApprovedRecords);
@@ -111,6 +125,7 @@ export default function ExploreScreen({ navigation }) {
     );
   }, [approvedRecords, search]);
 
+  // Visitors and staff open the same plant record page.
   function openRecord(record) {
     navigation.navigate('PlantRecordSummary', {
       record,
@@ -184,7 +199,33 @@ export default function ExploreScreen({ navigation }) {
 
   const listHeader = (
     <View>
-      <BotanistHeader />
+      {isVisitor ? <VisitorHeader /> : <BotanistHeader />}
+
+      {isVisitor && (
+        <View style={styles.hero}>
+          <View style={styles.heroDecoration}>
+            <Ionicons name="leaf-outline" size={100} color="#253B22" />
+          </View>
+
+          <Text style={styles.eyebrow}>THE WORLD OF PLANTS</Text>
+
+          <Text style={styles.heroTitle}>
+            Discover the{'\n'}
+            <Text style={styles.heroHighlight}>Wild.</Text>
+          </Text>
+
+          <Text style={styles.heroDescription}>
+            Explore the remarkable plant life of Niah National Park.
+          </Text>
+
+          <View style={styles.heroBottom}>
+            <View style={styles.heroDivider} />
+            <Text style={styles.heroFootnote}>
+              NATURE • DISCOVERY • CONSERVATION
+            </Text>
+          </View>
+        </View>
+      )}
 
       <View style={styles.sectionHeader}>
         <View>
@@ -272,6 +313,8 @@ export default function ExploreScreen({ navigation }) {
           ? 'Reading the records saved on this phone.'
           : search
             ? 'Try another plant name or family.'
+            : isVisitor
+            ? 'No plants are available yet. Pull down to check again.'
             : 'Plants approved by the admin will appear here after they are downloaded to this phone.'}
       </Text>
     </View>
@@ -308,7 +351,7 @@ export default function ExploreScreen({ navigation }) {
         ListFooterComponent={<View style={styles.listFooter} />}
       />
 
-      <BotanistBottomNav active="explore" />
+      <AppBottomNav active="explore" />
     </SafeAreaView>
   );
 }
@@ -336,6 +379,75 @@ const createStyles = (FOREST, pick, colors) => StyleSheet.create({
     paddingTop: 13,
     paddingBottom: 8,
     flexGrow: 1,
+  },
+
+  hero: {
+    backgroundColor: '#1B2A1A',
+    borderWidth: 1,
+    borderColor: '#30432A',
+    borderRadius: 24,
+    padding: 22,
+    marginBottom: 28,
+    overflow: 'hidden',
+    minHeight: 225,
+    justifyContent: 'center',
+  },
+
+  heroDecoration: {
+    position: 'absolute',
+    right: -12,
+    top: 25,
+    opacity: 0.75,
+    transform: [{ rotate: '-25deg' }],
+  },
+
+  eyebrow: {
+    fontSize: 9,
+    letterSpacing: 2,
+    fontWeight: '800',
+    color: HERO.green,
+    marginBottom: 13,
+  },
+
+  heroTitle: {
+    fontSize: 37,
+    lineHeight: 41,
+    fontWeight: '800',
+    letterSpacing: -1.3,
+    color: HERO.text,
+  },
+
+  heroHighlight: {
+    color: HERO.green,
+  },
+
+  heroDescription: {
+    maxWidth: 235,
+    fontSize: 12,
+    lineHeight: 19,
+    color: '#C0CBB8',
+    marginTop: 12,
+  },
+
+  heroBottom: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+    marginTop: 21,
+  },
+
+  heroDivider: {
+    height: 2,
+    width: 22,
+    backgroundColor: HERO.green,
+    borderRadius: 2,
+  },
+
+  heroFootnote: {
+    fontSize: 7,
+    letterSpacing: 1.1,
+    fontWeight: '700',
+    color: HERO.secondary,
   },
 
   sectionHeader: {

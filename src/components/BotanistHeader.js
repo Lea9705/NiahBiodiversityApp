@@ -51,7 +51,7 @@ export default function BotanistHeader() {
             logout();
             navigation.reset({
               index: 0,
-              routes: [{ name: 'RoleSelect' }],
+              routes: [{ name: 'VisitorHome' }],
             });
           },
         },

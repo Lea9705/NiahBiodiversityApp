@@ -1,7 +1,9 @@
 // Light / dark mode for the whole app.
-// - The app starts in light mode.
-// - toggleTheme() switches modes, and the choice is remembered on the phone.
-// - Screens call useTheme() and rebuild their styles when the mode changes.
+// - Visitors (not logged in) always start in light mode. They can switch for
+//   the moment, but it is not remembered.
+// - Staff get the mode they tapped last time as soon as they log in. Their
+//   choice is saved on the phone every time they tap the button.
+// - When staff log out, the app goes back to light mode.
 import React, {
   createContext,
   useContext,
@@ -13,8 +15,9 @@ import React, {
 import { Appearance } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { lightColors, darkColors } from './colors';
+import { useUser } from '../context/UserContext';
 
-const STORAGE_KEY = 'themeMode';
+const STAFF_KEY = 'staffThemeMode';
 const DEFAULT_MODE = 'light';
 
 const ThemeContext = createContext({
@@ -28,31 +31,36 @@ const ThemeContext = createContext({
 });
 
 export function ThemeProvider({ children }) {
+  const { isLoggedIn } = useUser();
   const [mode, setModeState] = useState(DEFAULT_MODE);
-  const [ready, setReady] = useState(false);
 
-  // Load the saved choice once, before anything is drawn.
+  // Log in: use the mode this staff member chose last time (light if none).
+  // Log out, or never logged in: light.
   useEffect(() => {
     let cancelled = false;
 
+    if (!isLoggedIn) {
+      setModeState(DEFAULT_MODE);
+      return undefined;
+    }
+
     (async () => {
       try {
-        const saved = await SecureStore.getItemAsync(STORAGE_KEY);
+        const saved = await SecureStore.getItemAsync(STAFF_KEY);
 
-        if (!cancelled && (saved === 'dark' || saved === 'light')) {
-          setModeState(saved);
+        if (!cancelled) {
+          setModeState(saved === 'dark' ? 'dark' : DEFAULT_MODE);
         }
       } catch (error) {
         console.log('Could not read the saved theme:', error.message);
-      } finally {
-        if (!cancelled) setReady(true);
+        if (!cancelled) setModeState(DEFAULT_MODE);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isLoggedIn]);
 
   // Make system dialogs (alerts, keyboard) follow the in-app choice too.
   useEffect(() => {
@@ -63,13 +71,19 @@ export function ThemeProvider({ children }) {
     }
   }, [mode]);
 
-  const setMode = useCallback((next) => {
-    setModeState(next);
+  const setMode = useCallback(
+    (next) => {
+      setModeState(next);
 
-    SecureStore.setItemAsync(STORAGE_KEY, next).catch((error) => {
-      console.log('Could not save the theme:', error.message);
-    });
-  }, []);
+      // Only staff choices are remembered.
+      if (isLoggedIn) {
+        SecureStore.setItemAsync(STAFF_KEY, next).catch((error) => {
+          console.log('Could not save the theme:', error.message);
+        });
+      }
+    },
+    [isLoggedIn]
+  );
 
   const toggleTheme = useCallback(() => {
     setMode(mode === 'dark' ? 'light' : 'dark');
@@ -86,8 +100,6 @@ export function ThemeProvider({ children }) {
     }),
     [mode, toggleTheme, setMode]
   );
-
-  if (!ready) return null;
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }

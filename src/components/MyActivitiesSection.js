@@ -15,6 +15,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useUser } from '../context/UserContext';
 import { useRecords } from '../context/RecordsContext';
 import { authFetch } from '../utils/session';
+import { recordFromCloudPlant } from '../utils/plantRecord';
 import { useTheme } from '../theme/ThemeContext';
 
 const PLANTS_URL = 'http://52.62.125.146/api/plants';
@@ -284,6 +285,7 @@ export default function MyActivitiesSection() {
             date: formatDate(plant.created_at),
             time: toTime(plant.created_at),
             detail,
+            plant,
           };
         });
 
@@ -392,16 +394,21 @@ export default function MyActivitiesSection() {
     [cloudActivities, records]
   );
 
+  // Opens the same plant record page as the cards in Explore.
   const openActivity = (item) => {
-    if (item.localRecord) {
-      // Not in the cloud yet, so open the copy saved on this phone.
-      navigation.navigate('PlantRecordSummary', {
-        record: item.localRecord,
-        readOnly: true,
-      });
-    } else {
-      navigation.navigate('PlantDetail', { plantId: item.id });
-    }
+    // 1. saved on this phone and not sent yet
+    // 2. already in the cloud: use the copy saved on this phone if there is one
+    //    (exactly what Explore shows), otherwise build it from the cloud data
+    const cloudId = String(item.plant ? item.plant.id : item.id);
+
+    const record =
+      item.localRecord ||
+      records.find((r) => String(r.serverId ?? '') === cloudId) ||
+      (item.plant ? recordFromCloudPlant(item.plant) : null);
+
+    if (!record) return;
+
+    navigation.navigate('PlantRecordSummary', { record, readOnly: true });
   };
 
   const filteredActivities =

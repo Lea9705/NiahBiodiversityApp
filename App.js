@@ -16,14 +16,14 @@ function ThemedStatusBar() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <ThemeProvider>
-        <UserProvider>
+      <UserProvider>
+        <ThemeProvider>
           <RecordsProvider>
             <ThemedStatusBar />
             <AppNavigator />
           </RecordsProvider>
-        </UserProvider>
-      </ThemeProvider>
+        </ThemeProvider>
+      </UserProvider>
     </SafeAreaProvider>
   );
 }

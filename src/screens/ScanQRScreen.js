@@ -8,7 +8,6 @@ import {
   Alert,
   Linking,
   ActivityIndicator,
-  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -16,7 +15,9 @@ import { useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRecords } from '../context/RecordsContext';
 import { authFetch } from '../utils/session';
-import BotanistBottomNav from '../components/BotanistBottomNav';
+import AppBottomNav from '../components/AppBottomNav';
+import { recordFromCloudPlant } from '../utils/plantRecord';
+import { useUser } from '../context/UserContext';
 
 const API_URL = 'http://52.62.125.146/api/plants';
 
@@ -160,11 +161,14 @@ export default function ScanQRScreen({ navigation, route }) {
 
   const isFocused = useIsFocused();
   const { records, loading: recordsLoading } = useRecords();
-  const isVisitor = route?.params?.mode === 'visitor';
 
-  // Botanists get the bottom bar and no back button. Visitors keep theirs.
-  const safeEdges = isVisitor ? undefined : ['top', 'left', 'right'];
-  const bottomNav = isVisitor ? null : <BotanistBottomNav active="scan" />;
+  // Someone who has not logged in is a visitor. Visitors and staff share this
+  // page and the bottom bar, but a visitor opens the public plant page.
+  const { isLoggedIn } = useUser();
+  const isVisitor = !isLoggedIn;
+
+  const safeEdges = ['top', 'left', 'right'];
+  const bottomNav = <AppBottomNav active="scan" />;
 
   useEffect(() => {
     if (isFocused) {
@@ -217,19 +221,11 @@ export default function ScanQRScreen({ navigation, route }) {
       if (matches.length === 1) {
         const record = matches[0];
 
-        if (isVisitor) {
-          const plant = normalizeLocalPlant(record);
-
-          navigation.replace('PlantDetail', {
-            plantId: String(record.serverId || record.id),
-            plant,
-          });
-        } else {
-          navigation.replace('PlantRecordSummary', {
-            record,
-            readOnly: true,
-          });
-        }
+        // Visitors and staff see the same plant record page.
+        navigation.replace('PlantRecordSummary', {
+          record,
+          readOnly: true,
+        });
 
         return;
       }
@@ -284,29 +280,10 @@ export default function ScanQRScreen({ navigation, route }) {
       if (cloudMatches.length === 1) {
         const plant = cloudMatches[0];
 
-        if (isVisitor) {
-          navigation.replace('PlantDetail', {
-            plantId: String(plant.id),
-            plant,
-          });
-        } else {
-          navigation.replace('PlantRecordSummary', {
-            record: {
-              ...plant,
-              id: String(plant.id),
-              serverId: String(plant.id),
-              scientificName: plant.scientific_name,
-              commonName: plant.common_name,
-              height: plant.height_m == null ? '' : String(plant.height_m),
-              diameter:
-                plant.diameter_cm == null ? '' : String(plant.diameter_cm),
-              notes: plant.morphological_notes || '',
-              photos: Array.isArray(plant.images) ? plant.images : [],
-              approvalStatus: plant.plant_status,
-            },
-            readOnly: true,
-          });
-        }
+        navigation.replace('PlantRecordSummary', {
+          record: recordFromCloudPlant(plant),
+          readOnly: true,
+        });
 
         return;
       }
@@ -334,7 +311,6 @@ export default function ScanQRScreen({ navigation, route }) {
   if (!permission) {
     return (
       <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor={DARK.bg} />
         <SafeAreaView style={styles.flex} edges={safeEdges}>
           <View style={styles.centerBox}>
             <ActivityIndicator color={DARK.green} />
@@ -349,17 +325,7 @@ export default function ScanQRScreen({ navigation, route }) {
   if (!permission.granted) {
     return (
       <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor={DARK.bg} />
         <SafeAreaView style={styles.flex} edges={safeEdges}>
-          {isVisitor && (
-            <TouchableOpacity
-              style={[styles.backButton, styles.backSpaced]}
-              onPress={() => navigation.goBack()}
-            >
-              <Ionicons name="return-up-back" size={21} color={DARK.green} />
-            </TouchableOpacity>
-          )}
-
           <View style={styles.centerBox}>
             <Ionicons name="camera-outline" size={36} color={DARK.green} />
             <Text style={styles.permissionText}>
@@ -396,7 +362,6 @@ export default function ScanQRScreen({ navigation, route }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={DARK.bg} />
       {isFocused && (
         <CameraView
           style={StyleSheet.absoluteFillObject}
@@ -416,19 +381,10 @@ export default function ScanQRScreen({ navigation, route }) {
       )}
 
       <SafeAreaView
-        style={[styles.overlay, !isVisitor && styles.overlayCentered]}
+        style={[styles.overlay, styles.overlayCentered]}
         edges={safeEdges}
       >
-        {isVisitor && (
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="return-up-back" size={21} color={DARK.green} />
-          </TouchableOpacity>
-        )}
-
-        <View style={[styles.frameWrap, !isVisitor && styles.frameWrapCentered]}>
+        <View style={[styles.frameWrap, styles.frameWrapCentered]}>
           <View style={styles.frame}>
             <View style={[styles.corner, styles.topLeft]} />
             <View style={[styles.corner, styles.topRight]} />
