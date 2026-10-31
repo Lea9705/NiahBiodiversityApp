@@ -1,11 +1,15 @@
-// Top bar for visitors (people who have not logged in).
-// It matches the staff top bar, but has the Niah Biodiversity name instead of
-// the profile icon and greeting, and a Login button (for staff) instead of Logout.
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+
 import { useTheme } from '../theme/ThemeContext';
+import BackButton from './BackButton';
 
 const PALETTES = {
   dark: {
@@ -16,6 +20,7 @@ const PALETTES = {
     muted: '#9BAE9F',
     border: '#2A4031',
   },
+
   light: {
     bg: '#F7F8F5',
     surfaceLight: '#E3F1E6',
@@ -26,18 +31,31 @@ const PALETTES = {
   },
 };
 
-export default function VisitorHeader() {
+export default function VisitorHeader({ onBack }) {
   const navigation = useNavigation();
   const { mode, isDark, toggleTheme } = useTheme();
 
   const COLORS = PALETTES[mode];
-  const styles = useMemo(() => createStyles(COLORS), [mode]);
+
+  const styles = useMemo(
+    () => createStyles(COLORS, Boolean(onBack)),
+    [mode, onBack]
+  );
 
   return (
     <View style={styles.row}>
+      {/* Only displayed on screens that pass onBack */}
+      {onBack ? (
+        <BackButton onPress={onBack} />
+      ) : null}
+
       <View style={styles.brandRow}>
         <View style={styles.logo}>
-          <Ionicons name="leaf" size={22} color={COLORS.green} />
+          <Ionicons
+            name="leaf"
+            size={22}
+            color={COLORS.green}
+          />
         </View>
 
         <View>
@@ -51,7 +69,9 @@ export default function VisitorHeader() {
         onPress={toggleTheme}
         activeOpacity={0.8}
         accessibilityRole="button"
-        accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+        accessibilityLabel={
+          isDark ? 'Switch to light mode' : 'Switch to dark mode'
+        }
       >
         <View style={styles.themeButton}>
           <Ionicons
@@ -60,7 +80,10 @@ export default function VisitorHeader() {
             color={COLORS.green}
           />
         </View>
-        <Text style={styles.themeLabel}>{isDark ? 'Light' : 'Dark'}</Text>
+
+        <Text style={styles.themeLabel}>
+          {isDark ? 'Light' : 'Dark'}
+        </Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -71,20 +94,25 @@ export default function VisitorHeader() {
         accessibilityLabel="Staff login"
       >
         <View style={styles.loginButton}>
-          <Ionicons name="log-in-outline" size={22} color={COLORS.bg} />
+          <Ionicons
+            name="log-in-outline"
+            size={22}
+            color={COLORS.bg}
+          />
         </View>
+
         <Text style={styles.loginLabel}>Login</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
-const createStyles = (COLORS) =>
+const createStyles = (COLORS, hasBackButton) =>
   StyleSheet.create({
     row: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 10,
+      gap: hasBackButton ? 7 : 10,
       marginBottom: 20,
     },
 
@@ -92,13 +120,14 @@ const createStyles = (COLORS) =>
       flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 10,
+      gap: 8,
+      minWidth: 0,
     },
 
     logo: {
-      width: 46,
-      height: 46,
-      borderRadius: 15,
+      width: hasBackButton ? 40 : 46,
+      height: hasBackButton ? 40 : 46,
+      borderRadius: 14,
       backgroundColor: COLORS.surfaceLight,
       alignItems: 'center',
       justifyContent: 'center',
@@ -106,16 +135,16 @@ const createStyles = (COLORS) =>
 
     brand: {
       color: COLORS.text,
-      fontSize: 17,
+      fontSize: hasBackButton ? 15 : 17,
       fontWeight: '900',
-      letterSpacing: 2,
+      letterSpacing: hasBackButton ? 1.5 : 2,
     },
 
     brandSub: {
       color: COLORS.muted,
-      fontSize: 9,
+      fontSize: hasBackButton ? 8 : 9,
       fontWeight: '700',
-      letterSpacing: 2.5,
+      letterSpacing: hasBackButton ? 1.7 : 2.5,
       marginTop: 2,
     },
 

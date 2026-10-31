@@ -1,4 +1,3 @@
-// Visitor home: the top bar, the "Explore the wild" card, and the bottom bar.
 import React, { useMemo } from 'react';
 import {
   View,
@@ -15,22 +14,22 @@ import VisitorHeader from '../components/VisitorHeader';
 import AppBottomNav from '../components/AppBottomNav';
 import { useTheme } from '../theme/ThemeContext';
 
-const PALETTES = {
-  dark: { bg: '#0B1712' },
-  light: { bg: '#F7F8F5' },
-};
-
-// The hero card keeps its deep-forest look in both themes.
 const HERO = {
+  background: '#00452F',
+  backgroundAccent: '#07583D',
   text: '#F2F6EE',
+  muted: '#D2E2D4',
   green: '#B8E986',
   dark: '#0B1712',
 };
 
 export default function VisitorHomeScreen({ navigation }) {
-  const { mode } = useTheme();
-  const COLORS = PALETTES[mode];
-  const styles = useMemo(() => createStyles(COLORS), [mode]);
+  const { mode, colors } = useTheme();
+
+  const styles = useMemo(
+    () => createStyles(colors, mode),
+    [colors, mode]
+  );
 
   return (
     <SafeAreaView
@@ -39,7 +38,7 @@ export default function VisitorHomeScreen({ navigation }) {
     >
       <StatusBar
         barStyle={mode === 'dark' ? 'light-content' : 'dark-content'}
-        backgroundColor={COLORS.bg}
+        backgroundColor={colors.bg}
       />
 
       <ScrollView
@@ -48,34 +47,104 @@ export default function VisitorHomeScreen({ navigation }) {
       >
         <VisitorHeader />
 
+        {/* Hero */}
         <View style={styles.hero}>
           <View style={styles.heroGlow} />
 
           <View style={styles.heroTag}>
             <View style={styles.liveDot} />
-            <Text style={styles.heroTagText}>EXPLORE THE WILD</Text>
+            <Text style={styles.heroTagText}>
+              NIAH NATIONAL PARK
+            </Text>
           </View>
 
           <Text style={styles.heroTitle}>
-            Nature is{'\n'}
-            <Text style={styles.heroTitleAccent}>waiting.</Text>
+            Discover{'\n'}
+            <Text style={styles.heroTitleAccent}>
+              The Wild.
+            </Text>
           </Text>
 
           <Text style={styles.heroDescription}>
-            Discover the remarkable plant life of Niah through every leaf,
-            trail and discovery.
+            Explore Niah's remarkable rainforest, ancient caves
+            and rich biodiversity.
           </Text>
 
           <Pressable
             style={styles.heroButton}
-            onPress={() => navigation.navigate('Explore')}
+            onPress={() => navigation.navigate('AboutNiah')}
+            accessibilityRole="button"
+            accessibilityLabel="Learn about Niah"
           >
-            <Text style={styles.heroButtonText}>Explore plants</Text>
-            <Ionicons name="arrow-forward" size={18} color={HERO.dark} />
+            <Text style={styles.heroButtonText}>
+              Learn About Niah
+            </Text>
+
+            <Ionicons
+              name="arrow-forward"
+              size={18}
+              color={HERO.dark}
+            />
           </Pressable>
 
           <View style={styles.heroDecoration}>
-            <Ionicons name="leaf-outline" size={130} color="#B8E986" />
+            <Ionicons
+              name="leaf-outline"
+              size={145}
+              color={HERO.green}
+            />
+          </View>
+        </View>
+
+        {/* Did You Know? */}
+        <View style={styles.factCard}>
+          <View style={styles.factTopRow}>
+            <View style={styles.factIcon}>
+              <Ionicons
+                name="sparkles-outline"
+                size={20}
+                color={colors.buttonBg}
+              />
+            </View>
+
+            <Text style={styles.factEyebrow}>
+              DID YOU KNOW?
+            </Text>
+          </View>
+
+          <Text style={styles.factTitle}>
+            A window into ancient history
+          </Text>
+
+          <Text style={styles.factDescription}>
+            Niah Caves Complex contains archaeological evidence of human interaction with rainforests spanning at least 50,000 years. These discoveries help researchers understand how ancient humans lived and adapted to their environment.
+          </Text>
+
+          <View style={styles.factFooter}>
+            <View style={styles.factFooterLine} />
+            <Text style={styles.factCategory}>
+              UNESCO WORLD HERITAGE SITE · 2024
+            </Text>
+          </View>
+        </View>
+
+        {/* Conservation message */}
+        <View style={styles.conservationCard}>
+          <Ionicons
+            name="earth-outline"
+            size={25}
+            color={colors.buttonBg}
+          />
+
+          <View style={styles.conservationTextWrap}>
+            <Text style={styles.conservationTitle}>
+              Discover. Learn. Protect.
+            </Text>
+
+            <Text style={styles.conservationDescription}>
+              Understanding biodiversity is an important step
+              towards protecting our natural heritage.
+            </Text>
           </View>
         </View>
       </ScrollView>
@@ -85,71 +154,73 @@ export default function VisitorHomeScreen({ navigation }) {
   );
 }
 
-const createStyles = (COLORS) =>
-  StyleSheet.create({
+const createStyles = (colors, mode) => {
+  const isDark = mode === 'dark';
+
+  return StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: COLORS.bg,
+      backgroundColor: colors.bg,
     },
 
     content: {
       paddingHorizontal: 18,
       paddingTop: 13,
-      paddingBottom: 24,
+      paddingBottom: 28,
     },
 
-    // To make the card taller or shorter, change minHeight.
+    // Hero
     hero: {
-      backgroundColor: '#1B3525',
+      backgroundColor: HERO.background,
       borderRadius: 26,
-      padding: 26,
-      minHeight: 440,
+      padding: 25,
+      minHeight: 370,
       overflow: 'hidden',
       justifyContent: 'center',
     },
 
     heroGlow: {
       position: 'absolute',
-      width: 260,
-      height: 260,
-      borderRadius: 130,
-      backgroundColor: '#294B32',
-      right: -90,
-      top: -60,
+      width: 250,
+      height: 250,
+      borderRadius: 125,
+      backgroundColor: HERO.backgroundAccent,
+      right: -100,
+      top: -75,
     },
 
     heroTag: {
       alignSelf: 'flex-start',
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 7,
-      backgroundColor: '#0D2118',
-      paddingHorizontal: 10,
-      paddingVertical: 7,
+      gap: 8,
+      backgroundColor: '#003522',
+      paddingHorizontal: 11,
+      paddingVertical: 8,
       borderRadius: 20,
-      marginBottom: 20,
+      marginBottom: 23,
     },
 
     liveDot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
+      width: 7,
+      height: 7,
+      borderRadius: 4,
       backgroundColor: HERO.green,
     },
 
     heroTagText: {
       color: HERO.green,
-      fontSize: 9,
+      fontSize: 10,
       fontWeight: '800',
-      letterSpacing: 1.3,
+      letterSpacing: 1.2,
     },
 
     heroTitle: {
       color: HERO.text,
-      fontSize: 44,
-      lineHeight: 48,
+      fontSize: 43,
+      lineHeight: 49,
       fontWeight: '900',
-      letterSpacing: -1.4,
+      letterSpacing: -1,
     },
 
     heroTitleAccent: {
@@ -157,11 +228,11 @@ const createStyles = (COLORS) =>
     },
 
     heroDescription: {
-      color: '#C0D0C2',
-      fontSize: 13,
-      lineHeight: 21,
+      color: HERO.muted,
+      fontSize: 14,
+      lineHeight: 22,
       marginTop: 14,
-      maxWidth: '82%',
+      maxWidth: '90%',
     },
 
     heroButton: {
@@ -170,10 +241,10 @@ const createStyles = (COLORS) =>
       alignSelf: 'flex-start',
       gap: 10,
       backgroundColor: HERO.green,
-      paddingHorizontal: 18,
+      paddingHorizontal: 17,
       paddingVertical: 14,
       borderRadius: 14,
-      marginTop: 26,
+      marginTop: 24,
     },
 
     heroButtonText: {
@@ -184,9 +255,106 @@ const createStyles = (COLORS) =>
 
     heroDecoration: {
       position: 'absolute',
-      right: -16,
-      bottom: 10,
-      opacity: 0.18,
+      right: -24,
+      bottom: 5,
+      opacity: 0.15,
       transform: [{ rotate: '-25deg' }],
     },
+
+    // Did You Know?
+    factCard: {
+      backgroundColor: isDark ? '#1D2B20' : '#FFFFFF',
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: isDark ? '#344737' : '#DFE9DC',
+      padding: 20,
+      marginTop: 20,
+    },
+
+    factTopRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginBottom: 14,
+    },
+
+    factIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      backgroundColor: isDark ? '#293D2B' : '#E6F3E4',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    factEyebrow: {
+      color: colors.buttonBg,
+      fontSize: 10,
+      fontWeight: '900',
+      letterSpacing: 1.8,
+    },
+
+    factTitle: {
+      color: colors.textPrimary,
+      fontSize: 19,
+      lineHeight: 25,
+      fontWeight: '800',
+    },
+
+    factDescription: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      lineHeight: 21,
+      marginTop: 9,
+    },
+
+    factFooter: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 9,
+      marginTop: 17,
+    },
+
+    factFooterLine: {
+      width: 22,
+      height: 3,
+      borderRadius: 2,
+      backgroundColor: colors.buttonBg,
+    },
+
+    factCategory: {
+      color: colors.textSecondary,
+      fontSize: 9,
+      fontWeight: '800',
+      letterSpacing: 1.3,
+    },
+
+    // Conservation message
+    conservationCard: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 13,
+      backgroundColor: colors.surfaceAlt,
+      borderRadius: 19,
+      padding: 18,
+      marginTop: 16,
+    },
+
+    conservationTextWrap: {
+      flex: 1,
+    },
+
+    conservationTitle: {
+      color: colors.textPrimary,
+      fontSize: 15,
+      fontWeight: '800',
+    },
+
+    conservationDescription: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      lineHeight: 20,
+      marginTop: 6,
+    },
   });
+};
