@@ -1,22 +1,22 @@
 // src/services/iotApi.js
 //
-// IoT API client for the mobile app.
+// IoT data for the mobile app.
 //
-// IMPORTANT:
-// Do not hardcode production API keys in the mobile app.
-// The backend team must confirm the approved mobile authentication method.
+// The phone only talks to OUR server, the same one the website uses. The server
+// holds the AWS access, so no AWS key or AWS address is stored in the app.
 import { authFetch } from '../utils/session';
 
+const SERVER = '52.62.125.146';
+
 export const IOT_ENDPOINTS = {
-  sensors:
-    'https://4rmy4ul48k.execute-api.ap-southeast-1.amazonaws.com/sensors',
+  // Sensor readings. The server must provide this route (the website expects it too).
+  sensors: `http://${SERVER}/api/iot/sensors`,
 
-  alerts:
-    'https://4rmy4ul48k.execute-api.ap-southeast-1.amazonaws.com/alerts',
-
-  websocket:
-    'wss://5hjbdij5il.execute-api.ap-southeast-1.amazonaws.com/prod',
+  // Live alerts. The server receives them from AWS and passes them on here.
+  alertsSocket: `ws://${SERVER}/api/ws/alerts`,
 };
+
+const REQUEST_TIMEOUT_MS = 15000;
 
 function normalizeArray(payload, keys = []) {
   if (Array.isArray(payload)) {
@@ -32,16 +32,34 @@ function normalizeArray(payload, keys = []) {
   return [];
 }
 
-async function getJson(url, signal) {
-  const response = await authFetch(url, {
-    method: 'GET',
-    headers: {
-      Accept: 'application/json',
-    },
-    signal,
-  });
+function failure(message, status) {
+  const error = new Error(message);
+  error.status = status;
+  return error;
+}
 
-  console.log('[IoT API]', url, 'HTTP status:', response.status);
+async function getJson(url) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  let response;
+
+  try {
+    response = await authFetch(url, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+    });
+  } catch (error) {
+    throw failure(
+      error?.name === 'AbortError'
+        ? 'The IoT request took too long. It will be tried again automatically.'
+        : 'Cannot reach the server. Check your internet connection.',
+      0
+    );
+  } finally {
+    clearTimeout(timer);
+  }
 
   const body = await response.text();
 
@@ -50,91 +68,174 @@ async function getJson(url, signal) {
   try {
     payload = body ? JSON.parse(body) : null;
   } catch (_) {
-    // Response is not valid JSON.
+    // The reply is not valid JSON.
   }
 
   if (!response.ok) {
-    const error = new Error(
-      response.status === 401 || response.status === 403
-        ? 'Backend authentication is required. Ask the backend team for the approved mobile access method.'
-        : `IoT request failed (${response.status}).`
+    const serverMessage =
+      typeof payload?.error === 'string' ? payload.error : '';
+
+    if (response.status === 401) {
+      throw failure(
+        'Your login has expired. Please log out and log in again.',
+        401
+      );
+    }
+
+    if (response.status === 403) {
+      throw failure(
+        'Your account is not allowed to see IoT data. Ask the backend team to allow your role.',
+        403
+      );
+    }
+
+    if (response.status === 404) {
+      throw failure(
+        'The server does not have the IoT sensor route yet. Ask the backend team to add GET /api/iot/sensors.',
+        404
+      );
+    }
+
+    throw failure(
+      serverMessage || `IoT request failed (${response.status}).`,
+      response.status
     );
-
-    error.status = response.status;
-
-    throw error;
   }
 
   return payload;
 }
 
-export async function fetchSensors(signal) {
-  const payload = await getJson(
-    IOT_ENDPOINTS.sensors,
-    signal
-  );
+export async function fetchSensors() {
+  const payload = await getJson(IOT_ENDPOINTS.sensors);
 
-  return normalizeArray(payload, [
-    'sensors',
-    'readings',
-    'data',
-    'items',
-  ]);
+  return normalizeArray(payload, ['sensors', 'readings', 'data', 'items']);
 }
 
-export async function fetchAlerts(signal) {
-  const payload = await getJson(
-    IOT_ENDPOINTS.alerts,
-    signal
-  );
+const IGNORED_MESSAGE_TYPES = [
+  'ping',
+  'pong',
+  'heartbeat',
+  'connected',
+  'connection',
+  'ack',
+  'welcome',
+];
 
-  return normalizeArray(payload, [
-    'alerts',
-    'data',
-    'items',
-  ]);
+const isObject = (value) =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
+
+// Turns whatever the server sends into a list of alerts.
+export function alertsFromMessage(data) {
+  if (Array.isArray(data)) {
+    return data.filter(isObject);
+  }
+
+  if (!isObject(data)) {
+    return [];
+  }
+
+  if (IGNORED_MESSAGE_TYPES.includes(String(data.type || '').toLowerCase())) {
+    return [];
+  }
+
+  for (const key of ['alerts', 'items']) {
+    if (Array.isArray(data[key])) {
+      return data[key].filter(isObject);
+    }
+  }
+
+  if (Array.isArray(data.data)) {
+    return data.data.filter(isObject);
+  }
+
+  if (isObject(data.alert)) {
+    return [data.alert];
+  }
+
+  if (isObject(data.data)) {
+    return [data.data];
+  }
+
+  return [data];
 }
 
-export function openIotSocket({ onMessage, onStatus }) {
-  let socket;
+// Listens for live alerts. It reconnects by itself, waiting a little longer
+// each time (2s, 4s, 8s ... up to 30s). Call the function it returns to stop.
+export function openAlertSocket({ onAlerts, onStatus }) {
+  let socket = null;
+  let retryTimer = null;
+  let attempt = 0;
+  let stopped = false;
 
-  try {
-    socket = new WebSocket(IOT_ENDPOINTS.websocket);
+  const scheduleRetry = () => {
+    if (stopped) return;
+
+    attempt += 1;
+    const delay = Math.min(30000, 2000 * 2 ** (attempt - 1));
+    retryTimer = setTimeout(connect, delay);
+  };
+
+  const connect = () => {
+    if (stopped) return;
 
     onStatus?.('connecting');
 
+    try {
+      socket = new WebSocket(IOT_ENDPOINTS.alertsSocket);
+    } catch (_) {
+      onStatus?.('disconnected');
+      scheduleRetry();
+      return;
+    }
+
     socket.onopen = () => {
+      attempt = 0;
       onStatus?.('connected');
     };
 
     socket.onmessage = (event) => {
+      let data;
+
       try {
-        const data = JSON.parse(event.data);
-        onMessage?.(data);
+        data = JSON.parse(event.data);
       } catch (_) {
-        onMessage?.({
-          message: event.data,
-        });
+        data = { message: String(event.data) };
+      }
+
+      const alerts = alertsFromMessage(data);
+
+      if (alerts.length > 0) {
+        onAlerts?.(alerts);
       }
     };
 
-    socket.onerror = () => {
-      onStatus?.('error');
-    };
+    // An error is always followed by a close, which handles the retry.
+    socket.onerror = () => {};
 
     socket.onclose = () => {
-      onStatus?.('disconnected');
+      socket = null;
+
+      if (!stopped) {
+        onStatus?.('disconnected');
+        scheduleRetry();
+      }
     };
-  } catch (_) {
-    onStatus?.('error');
-  }
+  };
+
+  connect();
 
   return () => {
-    if (
-      socket &&
-      socket.readyState < WebSocket.CLOSING
-    ) {
-      socket.close();
+    stopped = true;
+    clearTimeout(retryTimer);
+
+    if (socket) {
+      socket.onclose = null;
+
+      try {
+        socket.close();
+      } catch (_) {
+        // Already closed.
+      }
     }
   };
 }

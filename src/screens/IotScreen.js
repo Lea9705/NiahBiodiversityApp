@@ -28,10 +28,15 @@ import { useUser } from '../context/UserContext';
 import { useTheme } from '../theme/ThemeContext';
 
 import {
-  fetchAlerts,
   fetchSensors,
-  openIotSocket,
+  openAlertSocket,
 } from '../services/iotApi';
+
+// How often the dashboard asks the server for new readings.
+const REFRESH_SECONDS = 15;
+
+// How many alerts the page keeps.
+const MAX_ALERTS = 50;
 
 // --------------------------------------------------
 // COLOURS
@@ -78,6 +83,43 @@ const firstValue = (item, keys) => {
   }
 
   return null;
+};
+
+const ALERT_TIME_KEYS = ['created_at', 'recorded_at', 'timestamp', 'time'];
+
+// Adds new alerts at the top, skips repeats and keeps the newest ones.
+const mergeAlerts = (current, incoming) => {
+  const receivedAt = new Date().toISOString();
+
+  const stamped = incoming.map((alert) =>
+    firstValue(alert, ALERT_TIME_KEYS) === null
+      ? { ...alert, timestamp: receivedAt }
+      : alert
+  );
+
+  const keyOf = (alert) =>
+    String(
+      firstValue(alert, ['id', 'alert_id']) ??
+        [
+          firstValue(alert, ['device_id', 'deviceId', 'device']),
+          firstValue(alert, ALERT_TIME_KEYS),
+          firstValue(alert, ['title', 'alert_type', 'type', 'event_type', 'name']),
+        ].join('|')
+    );
+
+  const seen = new Set();
+  const merged = [];
+
+  [...stamped, ...current].forEach((alert) => {
+    const key = keyOf(alert);
+
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push(alert);
+    }
+  });
+
+  return merged.slice(0, MAX_ALERTS);
 };
 
 const asNumber = (value) => {
@@ -190,6 +232,9 @@ export default function IotScreen() {
   const [sensors, setSensors] = useState([]);
   const [alerts, setAlerts] = useState([]);
 
+  // Live alert feed: connecting, connected or disconnected
+  const [alertStatus, setAlertStatus] = useState('connecting');
+
   // Loading states
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -228,46 +273,15 @@ export default function IotScreen() {
       }
 
       try {
-        const results = await Promise.allSettled([
-          fetchSensors(),
-          fetchAlerts(),
-        ]);
+        const readings = await fetchSensors();
 
-        const sensorResult = results[0];
-        const alertResult = results[1];
-
-        if (sensorResult.status === 'fulfilled') {
-          setSensors(sensorResult.value);
-        }
-
-        if (alertResult.status === 'fulfilled') {
-          setAlerts(alertResult.value);
-        }
-
-        const failures = results.filter(
-          (result) => result.status === 'rejected'
-        );
-
-        if (failures.length === 2) {
-          setError(
-            failures[0].reason?.message ||
-              'Could not load IoT data.'
-          );
-        } else if (failures.length > 0) {
-          setError(
-            'Some IoT information could not be loaded. Pull down to retry.'
-          );
-        } else {
-          setError('');
-        }
-
-        if (failures.length < 2) {
-          setLastUpdated(new Date());
-        }
+        setSensors(readings);
+        setConnection('connected');
+        setLastUpdated(new Date());
+        setError('');
       } catch (e) {
-        setError(
-          e?.message || 'Could not load IoT data.'
-        );
+        setConnection('error');
+        setError(e?.message || 'Could not load IoT data.');
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -277,7 +291,7 @@ export default function IotScreen() {
   );
 
   // ------------------------------------------------
-  // AUTOMATIC REFRESH + WEBSOCKET
+  // AUTOMATIC REFRESH + LIVE ALERTS
   // ------------------------------------------------
 
   useEffect(() => {
@@ -287,23 +301,21 @@ export default function IotScreen() {
 
     loadData();
 
-    // Refresh REST data every 30 seconds.
+    // Ask the server for fresh readings every few seconds.
     const poll = setInterval(() => {
       loadData();
-    }, 30000);
+    }, REFRESH_SECONDS * 1000);
 
-    // Refresh data when a WebSocket message arrives.
-    const closeSocket = openIotSocket({
-      onStatus: setConnection,
-
-      onMessage: () => {
-        loadData();
-      },
+    // New security alerts arrive live from the server.
+    const closeAlerts = openAlertSocket({
+      onStatus: setAlertStatus,
+      onAlerts: (incoming) =>
+        setAlerts((current) => mergeAlerts(current, incoming)),
     });
 
     return () => {
       clearInterval(poll);
-      closeSocket?.();
+      closeAlerts();
     };
   }, [isLoggedIn, loadData]);
 
@@ -375,25 +387,32 @@ export default function IotScreen() {
   // DASHBOARD METRICS
   // ------------------------------------------------
 
-  const onlineCount = deviceRows.filter(
-    ({ latest }) =>
-      firstValue(latest, [
-        'online',
-        'is_online',
-        'status',
-      ]) === true ||
-      String(
-        firstValue(latest, ['status']) || ''
-      ).toLowerCase() === 'online'
-  ).length;
+  // The website counts a device as online when it has a reading, and it
+  // averages the latest reading of every device. The app does the same, so
+  // both show the same numbers.
+  const latestReadings = deviceRows.map(({ latest }) => latest);
 
-  const temperature = average(sensors, [
+  const hasStatusField = latestReadings.some(
+    (latest) =>
+      firstValue(latest, ['online', 'is_online', 'status']) !== null
+  );
+
+  const onlineCount = hasStatusField
+    ? deviceRows.filter(
+        ({ latest }) =>
+          firstValue(latest, ['online', 'is_online']) === true ||
+          String(firstValue(latest, ['status']) || '').toLowerCase() ===
+            'online'
+      ).length
+    : deviceRows.length;
+
+  const temperature = average(latestReadings, [
     'temperature',
     'temp',
     'temperature_c',
   ]);
 
-  const humidity = average(sensors, [
+  const humidity = average(latestReadings, [
     'humidity',
     'relative_humidity',
   ]);
@@ -420,11 +439,11 @@ export default function IotScreen() {
   // ------------------------------------------------
 
   const connectionText = {
-    connected: 'Live connection active',
-    connecting: 'Connecting to live updates…',
-    disconnected: 'Live connection disconnected',
-    error: 'Live connection unavailable',
-  }[connection] || 'Live connection status unknown';
+    connected: 'Receiving sensor data',
+    connecting: 'Connecting to the sensors…',
+    disconnected: 'Not receiving sensor data',
+    error: 'Not receiving sensor data',
+  }[connection] || 'Sensor status unknown';
 
   const connectionColor =
     connection === 'connected'
@@ -491,7 +510,7 @@ export default function IotScreen() {
           </View>
         </View>
 
-        {/* LIVE CONNECTION STATUS */}
+        {/* SENSOR CONNECTION STATUS */}
 
         <View style={styles.connectionCard}>
           <View
@@ -509,7 +528,7 @@ export default function IotScreen() {
             </Text>
 
             <Text style={styles.connectionSub}>
-              Sensor and alert data refresh automatically
+              {`Sensor readings refresh every ${REFRESH_SECONDS} seconds`}
             </Text>
           </View>
 
@@ -593,7 +612,11 @@ export default function IotScreen() {
             icon="warning-outline"
             label="Security alerts"
             value={String(activeAlerts.length)}
-            detail="Unresolved alerts"
+            detail={
+              alertStatus === 'connected'
+                ? 'Live alert feed connected'
+                : 'Waiting for the live alert feed'
+            }
             styles={styles}
             colors={colors}
           />
@@ -785,12 +808,12 @@ export default function IotScreen() {
           </Text>
         </View>
 
-        {loading && !alerts.length ? (
+        {alertStatus === 'connecting' && !alerts.length ? (
           <View style={styles.emptyCard}>
             <ActivityIndicator color={colors.green} />
 
             <Text style={styles.emptyText}>
-              Loading alerts…
+              Connecting to live alerts…
             </Text>
           </View>
         ) : activeAlerts.length ? (
@@ -909,7 +932,9 @@ export default function IotScreen() {
             />
 
             <Text style={styles.emptyText}>
-              No active security alerts.
+              {alertStatus === 'connected'
+                ? 'No alerts yet. New security alerts appear here as they happen.'
+                : 'The live alert feed is not connected. Trying again…'}
             </Text>
           </View>
         )}
