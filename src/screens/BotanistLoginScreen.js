@@ -8,7 +8,7 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  ImageBackgroundgu,
+  ImageBackground,
   StatusBar,
   KeyboardAvoidingView,
   Platform,
@@ -22,6 +22,7 @@ import PrimaryButton from '../components/PrimaryButton';
 import BackButton from '../components/BackButton';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../theme/ThemeContext';
+
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
