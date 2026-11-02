@@ -1,3 +1,4 @@
+
 // Botanist login. The email and password are checked by the server.
 // A wrong email or password shows an error message.
 // Styled to match the Niah Biodiversity botanical theme.
@@ -14,6 +15,7 @@ import {
   Platform,
   ScrollView,
   Alert,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,8 +25,10 @@ import BackButton from '../components/BackButton';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../theme/ThemeContext';
 
-
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const FORGOT_PASSWORD_URL =
+  'http://52.62.125.146/forgot-password';
 
 export default function BotanistLoginScreen({ navigation }) {
   const { styles, mode, pick } = useStyles();
@@ -72,12 +76,25 @@ export default function BotanistLoginScreen({ navigation }) {
       setLoading(false);
 
       if (error.code === 'INVALID_CREDENTIALS') {
-        // One popup, one sentence, for every kind of wrong login.
         Alert.alert('Login failed', error.message);
         return;
       }
 
-      setLoginError(error.message || 'Unable to log in. Please try again.');
+      setLoginError(
+        error.message || 'Unable to log in. Please try again.'
+      );
+    }
+  };
+
+  // Open the Forgot Password webpage provided by JC.
+  const handleForgotPassword = async () => {
+    try {
+      await Linking.openURL(FORGOT_PASSWORD_URL);
+    } catch (error) {
+      Alert.alert(
+        'Unable to open page',
+        'Please try again later.'
+      );
     }
   };
 
@@ -87,11 +104,13 @@ export default function BotanistLoginScreen({ navigation }) {
       style={styles.container}
       resizeMode="cover"
     >
-      <StatusBar barStyle={mode === 'dark' ? 'light-content' : 'dark-content'} />
+      <StatusBar
+        barStyle={mode === 'dark' ? 'light-content' : 'dark-content'}
+      />
 
       <View style={styles.overlay}>
         <SafeAreaView style={styles.safeArea}>
-          {/* Shared BackButton used by the other screens */}
+          {/* Back button */}
           <View style={styles.backContainer}>
             <BackButton onPress={() => navigation.goBack()} />
           </View>
@@ -125,6 +144,7 @@ export default function BotanistLoginScreen({ navigation }) {
                     size={15}
                     color={pick('#8BD66D', '#2A7A45')}
                   />
+
                   <Text style={styles.roleBadgeText}>
                     BOTANIST ACCESS
                   </Text>
@@ -139,6 +159,7 @@ export default function BotanistLoginScreen({ navigation }) {
                   Sign in with your staff account to continue.
                 </Text>
 
+                {/* Email input */}
                 <View style={styles.inputGroup}>
                   <StyledInput
                     label="Staff Email"
@@ -165,6 +186,7 @@ export default function BotanistLoginScreen({ navigation }) {
                   />
                 </View>
 
+                {/* Password input */}
                 <View style={styles.inputGroup}>
                   <StyledInput
                     label="Password"
@@ -216,21 +238,20 @@ export default function BotanistLoginScreen({ navigation }) {
                   </TouchableOpacity>
                 </View>
 
+                {/* Forgot Password */}
                 <TouchableOpacity
                   style={styles.forgotButton}
-                  onPress={() => {
-                    alert(
-                      'Password reset is not available yet. Please contact your administrator.'
-                    );
-                  }}
+                  onPress={handleForgotPassword}
                   activeOpacity={0.7}
+                  accessibilityRole="link"
+                  accessibilityLabel="Forgot Password"
                 >
                   <Text style={styles.forgot}>
                     Forgot Password?
                   </Text>
                 </TouchableOpacity>
 
-                {/* Error from the server (wrong email or password, etc.) */}
+                {/* Login error */}
                 {loginError ? (
                   <View style={styles.errorBanner}>
                     <Ionicons
@@ -238,10 +259,14 @@ export default function BotanistLoginScreen({ navigation }) {
                       size={18}
                       color={pick('#F08C86', '#B3392F')}
                     />
-                    <Text style={styles.errorBannerText}>{loginError}</Text>
+
+                    <Text style={styles.errorBannerText}>
+                      {loginError}
+                    </Text>
                   </View>
                 ) : null}
 
+                {/* Login button */}
                 <PrimaryButton
                   title={loading ? 'Logging in...' : 'Log in'}
                   onPress={handleLogin}
@@ -251,6 +276,7 @@ export default function BotanistLoginScreen({ navigation }) {
                   ]}
                 />
 
+                {/* Security note */}
                 <View style={styles.securityNote}>
                   <Ionicons
                     name="shield-checkmark-outline"
@@ -288,6 +314,7 @@ export default function BotanistLoginScreen({ navigation }) {
 // Styles are rebuilt whenever the light/dark mode changes.
 function useStyles() {
   const { mode, pick, colors } = useTheme();
+
   const styles = useMemo(
     () => createStyles(null, pick, colors),
     [mode]
@@ -296,192 +323,214 @@ function useStyles() {
   return { colors, styles, mode, pick };
 }
 
-const createStyles = (_palette, pick, colors) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: pick('#101711', '#EAF0E8'),
-  },
+const createStyles = (_palette, pick, colors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: pick('#101711', '#EAF0E8'),
+    },
 
-  overlay: {
-    flex: 1,
-    backgroundColor: pick('rgba(5, 12, 8, 0.76)', 'rgba(247, 248, 245, 0.88)'),
-  },
+    overlay: {
+      flex: 1,
+      backgroundColor: pick(
+        'rgba(5, 12, 8, 0.76)',
+        'rgba(247, 248, 245, 0.88)'
+      ),
+    },
 
-  safeArea: {
-    flex: 1,
-  },
+    safeArea: {
+      flex: 1,
+    },
 
-  backContainer: {
-    alignSelf: 'flex-start',
-    marginLeft: 22,
-    marginTop: 8,
-    zIndex: 2,
-  },
+    backContainer: {
+      alignSelf: 'flex-start',
+      marginLeft: 22,
+      marginTop: 8,
+      zIndex: 2,
+    },
 
-  keyboardArea: {
-    flex: 1,
-  },
+    keyboardArea: {
+      flex: 1,
+    },
 
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 22,
-    paddingTop: 20,
-    paddingBottom: 26,
-  },
+    scrollContent: {
+      flexGrow: 1,
+      justifyContent: 'center',
+      paddingHorizontal: 22,
+      paddingTop: 20,
+      paddingBottom: 26,
+    },
 
-  header: {
-    alignItems: 'center',
-    marginBottom: 28,
-  },
+    header: {
+      alignItems: 'center',
+      marginBottom: 28,
+    },
 
-  logo: {
-    width: 78,
-    height: 78,
-    borderRadius: 25,
-    backgroundColor: pick('#10364A', '#E1EEF9'),
-    borderWidth: 1,
-    borderColor: pick('rgba(85, 184, 255, 0.45)', 'rgba(31, 111, 176, 0.35)'),
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 17,
-  },
+    logo: {
+      width: 78,
+      height: 78,
+      borderRadius: 25,
+      backgroundColor: pick('#10364A', '#E1EEF9'),
+      borderWidth: 1,
+      borderColor: pick(
+        'rgba(85, 184, 255, 0.45)',
+        'rgba(31, 111, 176, 0.35)'
+      ),
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 17,
+    },
 
-  subtitle: {
-    fontSize: 13,
-    lineHeight: 20,
-    color: pick('#C5D0C7', '#4D6052'),
-    textAlign: 'center',
-    marginTop: 7,
-  },
+    subtitle: {
+      fontSize: 13,
+      lineHeight: 20,
+      color: pick('#C5D0C7', '#4D6052'),
+      textAlign: 'center',
+      marginTop: 7,
+    },
 
-  roleBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 19,
-    paddingVertical: 10,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: pick('rgba(92, 174, 103, 0.55)', 'rgba(42, 122, 69, 0.45)'),
-    backgroundColor: pick('rgba(20, 61, 34, 0.8)', '#E3F1E6'),
-    marginTop: 18,
-  },
+    roleBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: 19,
+      paddingVertical: 10,
+      borderRadius: 24,
+      borderWidth: 1,
+      borderColor: pick(
+        'rgba(92, 174, 103, 0.55)',
+        'rgba(42, 122, 69, 0.45)'
+      ),
+      backgroundColor: pick(
+        'rgba(20, 61, 34, 0.8)',
+        '#E3F1E6'
+      ),
+      marginTop: 18,
+    },
 
-  roleBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1.2,
-    color: pick('#A7D99A', '#245F39'),
-  },
+    roleBadgeText: {
+      fontSize: 12,
+      fontWeight: '700',
+      letterSpacing: 1.2,
+      color: pick('#A7D99A', '#245F39'),
+    },
 
-  formCard: {
-    backgroundColor: pick('rgba(20, 31, 24, 0.94)', 'rgba(255, 255, 255, 0.96)'),
-    borderWidth: 1,
-    borderColor: pick('rgba(157, 190, 158, 0.38)', '#D3E0D0'),
-    borderRadius: 24,
-    padding: 20,
-  },
+    formCard: {
+      backgroundColor: pick(
+        'rgba(20, 31, 24, 0.94)',
+        'rgba(255, 255, 255, 0.96)'
+      ),
+      borderWidth: 1,
+      borderColor: pick(
+        'rgba(157, 190, 158, 0.38)',
+        '#D3E0D0'
+      ),
+      borderRadius: 24,
+      padding: 20,
+    },
 
-  formTitle: {
-    fontSize: 21,
-    fontWeight: '700',
-    color: pick('#F5F6F0', '#17261C'),
-  },
+    formTitle: {
+      fontSize: 21,
+      fontWeight: '700',
+      color: pick('#F5F6F0', '#17261C'),
+    },
 
-  formSubtitle: {
-    fontSize: 12,
-    lineHeight: 18,
-    color: pick('#AEBBB0', '#5E7062'),
-    marginTop: 6,
-    marginBottom: 22,
-  },
+    formSubtitle: {
+      fontSize: 12,
+      lineHeight: 18,
+      color: pick('#AEBBB0', '#5E7062'),
+      marginTop: 6,
+      marginBottom: 22,
+    },
 
-  inputGroup: {
-    marginBottom: 13,
-  },
+    inputGroup: {
+      marginBottom: 13,
+    },
 
-  passwordToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-end',
-    gap: 6,
-    paddingTop: 10,
-    paddingBottom: 3,
-  },
+    passwordToggle: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      alignSelf: 'flex-end',
+      gap: 6,
+      paddingTop: 10,
+      paddingBottom: 3,
+    },
 
-  passwordToggleText: {
-    fontSize: 12,
-    color: pick('#A9B8AB', '#5E7062'),
-  },
+    passwordToggleText: {
+      fontSize: 12,
+      color: pick('#A9B8AB', '#5E7062'),
+    },
 
-  forgotButton: {
-    alignSelf: 'flex-end',
-    paddingVertical: 8,
-    marginBottom: 15,
-  },
+    forgotButton: {
+      alignSelf: 'flex-end',
+      paddingVertical: 8,
+      marginBottom: 15,
+    },
 
-  forgot: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: pick('#8BD66D', '#2A7A45'),
-  },
+    forgot: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: pick('#8BD66D', '#2A7A45'),
+    },
 
-  errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 9,
-    padding: 12,
-    marginBottom: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: pick('#713A38', '#F0BDB8'),
-    backgroundColor: pick('#251B19', '#FCE9E7'),
-  },
+    errorBanner: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 9,
+      padding: 12,
+      marginBottom: 14,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: pick('#713A38', '#F0BDB8'),
+      backgroundColor: pick('#251B19', '#FCE9E7'),
+    },
 
-  errorBannerText: {
-    flex: 1,
-    fontSize: 12,
-    lineHeight: 18,
-    color: pick('#F5B8B3', '#8E2B23'),
-  },
+    errorBannerText: {
+      flex: 1,
+      fontSize: 12,
+      lineHeight: 18,
+      color: pick('#F5B8B3', '#8E2B23'),
+    },
 
-  loginButton: {
-    marginBottom: 18,
-  },
+    loginButton: {
+      marginBottom: 18,
+    },
 
-  loginButtonLoading: {
-    opacity: 0.6,
-  },
+    loginButtonLoading: {
+      opacity: 0.6,
+    },
 
-  securityNote: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    borderTopWidth: 1,
-    borderTopColor: pick('rgba(157, 190, 158, 0.2)', '#DDE6DA'),
-    paddingTop: 16,
-  },
+    securityNote: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 10,
+      borderTopWidth: 1,
+      borderTopColor: pick(
+        'rgba(157, 190, 158, 0.2)',
+        '#DDE6DA'
+      ),
+      paddingTop: 16,
+    },
 
-  note: {
-    flex: 1,
-    fontSize: 11,
-    lineHeight: 17,
-    color: pick('#B8C4B9', '#5E7062'),
-  },
+    note: {
+      flex: 1,
+      fontSize: 11,
+      lineHeight: 17,
+      color: pick('#B8C4B9', '#5E7062'),
+    },
 
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 7,
-    marginTop: 24,
-  },
+    footer: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 7,
+      marginTop: 24,
+    },
 
-  footerText: {
-    fontSize: 9,
-    fontWeight: '600',
-    letterSpacing: 1.2,
-    color: pick('#A4B9A5', '#5E7062'),
-  },
-});
+    footerText: {
+      fontSize: 9,
+      fontWeight: '600',
+      letterSpacing: 1.2,
+      color: pick('#A4B9A5', '#5E7062'),
+    },
+  });

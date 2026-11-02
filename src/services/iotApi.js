@@ -5,6 +5,7 @@
 // IMPORTANT:
 // Do not hardcode production API keys in the mobile app.
 // The backend team must confirm the approved mobile authentication method.
+import { authFetch } from '../utils/session';
 
 export const IOT_ENDPOINTS = {
   sensors:
@@ -32,13 +33,15 @@ function normalizeArray(payload, keys = []) {
 }
 
 async function getJson(url, signal) {
-  const response = await fetch(url, {
+  const response = await authFetch(url, {
     method: 'GET',
     headers: {
       Accept: 'application/json',
     },
     signal,
   });
+
+  console.log('[IoT API]', url, 'HTTP status:', response.status);
 
   const body = await response.text();
 
