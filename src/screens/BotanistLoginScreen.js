@@ -8,7 +8,7 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  ImageBackgroundgu,
+  ImageBackground,
   StatusBar,
   KeyboardAvoidingView,
   Platform,
