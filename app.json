@@ -17,7 +17,12 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#171614"
       },
-      "package": "com.waena.niahbiodiversity"
+      "package": "com.waena.niahbiodiversity",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -25,14 +30,47 @@
     "plugins": [
       "expo-status-bar",
       "expo-sqlite",
-      "expo-build-properties",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true,
+            "enableMinifyInReleaseBuilds": false,
+            "enableShrinkResourcesInReleaseBuilds": false,
+            "extraProguardRules": "-keep class androidx.work.** { *; }\n-keep class androidx.room.** { *; }\n-keep class * extends androidx.room.RoomDatabase { *; }\n-dontwarn androidx.work.**"
+          }
+        }
+      ],
       "expo-font",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Niah Biodiversity uses the camera to scan plant QR tags and to take plant photos.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Niah Biodiversity uses your location to record where a plant was found."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Niah Biodiversity lets you pick plant photos from your gallery.",
+          "cameraPermission": "Niah Biodiversity uses the camera to take plant photos.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "extra": {
       "eas": {
-        "projectId": "bba54543-d1e0-4bff-9347-6713bc9762c8"
+        "projectId": "f7392629-2ff5-4cc8-9a0d-39a4a1f3063e"
       }
-    }
+    },
+    "owner": "lea05"
   }
 }
