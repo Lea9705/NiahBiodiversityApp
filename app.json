@@ -21,6 +21,9 @@
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
@@ -71,6 +74,12 @@
         "projectId": "f7392629-2ff5-4cc8-9a0d-39a4a1f3063e"
       }
     },
-    "owner": "lea05"
+    "owner": "lea05",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/f7392629-2ff5-4cc8-9a0d-39a4a1f3063e"
+    }
   }
 }
