@@ -1,8 +1,9 @@
 // Shared logic for submitting a single local record to the cloud.
 import { uploadAllPhotos, uploadPhotoToS3 } from './uploadPhoto';
 import { authFetch, getUser } from './session';
+import { API_BASE } from '../config';
 
-const API_URL = 'http://52.62.125.146/api/plants';
+const API_URL = `${API_BASE}/plants`;
 
 // Remembers the photo links already uploaded for each record (in memory
 // only), so a retry doesn't upload the same photos to S3 again.

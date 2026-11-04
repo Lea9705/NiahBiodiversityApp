@@ -18,8 +18,9 @@ import { authFetch } from '../utils/session';
 import AppBottomNav from '../components/AppBottomNav';
 import { recordFromCloudPlant } from '../utils/plantRecord';
 import { useUser } from '../context/UserContext';
+import { API_BASE } from '../config';
 
-const API_URL = 'http://52.62.125.146/api/plants';
+const API_URL = `${API_BASE}/plants`;
 
 const DARK = {
   bg: '#0B1712',

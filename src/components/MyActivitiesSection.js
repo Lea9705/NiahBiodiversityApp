@@ -18,8 +18,9 @@ import { authFetch } from '../utils/session';
 import { recordFromCloudPlant } from '../utils/plantRecord';
 import { formatDateTime } from '../utils/timeLog';
 import { useTheme } from '../theme/ThemeContext';
+import { API_BASE } from '../config';
 
-const PLANTS_URL = 'http://52.62.125.146/api/plants';
+const PLANTS_URL = `${API_BASE}/plants`;
 
 // How often the list checks the cloud for status changes (in milliseconds).
 const REFRESH_INTERVAL_MS = 15000;

@@ -17,8 +17,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { authFetch } from '../utils/session';
 import { useTheme } from '../theme/ThemeContext';
 import { buildTimeLogEntries, formatDateTime } from '../utils/timeLog';
+import { API_BASE } from '../config';
 
-const PLANTS_URL = 'http://52.62.125.146/api/plants';
+const PLANTS_URL = `${API_BASE}/plants`;
 const REQUEST_TIMEOUT_MS = 12000;
 
 // How often the log checks the server, and the longest it waits between

@@ -10,10 +10,11 @@ import { syncRecordToCloud, syncUpdateToCloud } from '../utils/syncRecord';
 import { useUser } from './UserContext';
 import { authFetch, getUser, getToken } from '../utils/session';
 import * as SecureStore from 'expo-secure-store';
+import { API_BASE } from '../config';
 
 const RecordsContext = createContext(null);
 
-const PLANTS_URL = 'http://52.62.125.146/api/plants';
+const PLANTS_URL = `${API_BASE}/plants`;
 
 // How often the phone checks the cloud for plants that were approved,
 // rejected or deleted (while it is online and someone is logged in).

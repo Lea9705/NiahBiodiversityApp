@@ -24,11 +24,12 @@ import PrimaryButton from '../components/PrimaryButton';
 import BackButton from '../components/BackButton';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../theme/ThemeContext';
+import { SERVER_URL } from '../config';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const FORGOT_PASSWORD_URL =
-  'http://52.62.125.146/forgot-password';
+  `${SERVER_URL}/forgot-password`;
 
 export default function BotanistLoginScreen({ navigation }) {
   const { styles, mode, pick } = useStyles();

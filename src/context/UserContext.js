@@ -12,8 +12,9 @@ import React, {
 } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { setSession, clearSession } from '../utils/session';
+import { API_BASE } from '../config';
 
-const LOGIN_URL = 'http://52.62.125.146/api/login';
+const LOGIN_URL = `${API_BASE}/login`;
 const TOKEN_KEY = 'authToken';
 const USER_KEY = 'authUser';
 
