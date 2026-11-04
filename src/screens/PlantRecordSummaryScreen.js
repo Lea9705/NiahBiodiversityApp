@@ -14,8 +14,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
 import { useRecords } from '../context/RecordsContext';
+import { useUser } from '../context/UserContext';
 import BackButton from '../components/BackButton';
+import PlantTimeLog from '../components/PlantTimeLog';
 import { useTheme } from '../theme/ThemeContext';
+import { normalizeApproval } from '../utils/approval';
+import { formatDateTime } from '../utils/timeLog';
 
 const PALETTES = {
   dark: {
@@ -27,6 +31,12 @@ const PALETTES = {
     muted: '#9BAE9F',
     border: '#2A4031',
     white: '#FFFFFF',
+    success: '#B8E986',
+    successBg: '#203B2A',
+    warning: '#F2C879',
+    warningBg: '#3B3020',
+    error: '#F08C86',
+    errorBg: '#3B2322',
   },
   light: {
     bg: '#F7F8F5',
@@ -37,14 +47,23 @@ const PALETTES = {
     muted: '#5E7062',
     border: '#D3DFCF',
     white: '#FFFFFF',
+    success: '#2A7A45',
+    successBg: '#E8F5EB',
+    warning: '#8A5A00',
+    warningBg: '#FBEED0',
+    error: '#B3392F',
+    errorBg: '#FCE9E7',
   },
 };
 
 export default function PlantRecordSummaryScreen({ navigation, route }) {
   const { styles, COLORS, mode } = useStyles();
 
-  const { record, readOnly } = route.params;
-  const { addRecord } = useRecords();
+  const { record, readOnly, editing } = route.params;
+  const { addRecord, updateRecord } = useRecords();
+
+  // Staff are logged in. Visitors are not.
+  const { isLoggedIn } = useUser();
 
   const [submitting, setSubmitting] = useState(false);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(null);
@@ -52,12 +71,26 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
   const photos = Array.isArray(record.photos) ? record.photos : [];
   const qrValue = String(record.serverId || record.id || '');
 
+  // Status, last updated time and whether this record can be edited.
+  const approval = normalizeApproval(record.approvalStatus);
+  const waitingToSync = record.status === 'pending' && !!record.serverId;
+  const lastUpdated = formatDateTime(record.lastEdit || record.createdAt);
+
+  const canEdit =
+    !!readOnly &&
+    isLoggedIn &&
+    !!record.serverId &&
+    !waitingToSync &&
+    (approval === 'Approved' || approval === 'Rejected');
+
   const handleSend = () => {
     if (submitting) return;
 
     Alert.alert(
-      'Submit plant record?',
-      'Please confirm that you want to submit this plant record.',
+      editing ? 'Submit your changes?' : 'Submit plant record?',
+      editing
+        ? 'This record will go back to Pending until an admin approves it again.'
+        : 'Please confirm that you want to submit this plant record.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -66,25 +99,41 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
             setSubmitting(true);
 
             try {
-              const status = await addRecord({
-                ...record,
-                status: 'pending',
-              });
+              const status = editing
+                ? await updateRecord({ ...record })
+                : await addRecord({
+                    ...record,
+                    status: 'pending',
+                  });
 
               setSubmitting(false);
 
-              Alert.alert(
-                status === 'synced' ? 'Record submitted' : 'Record saved',
+              let title = status === 'synced' ? 'Record submitted' : 'Record saved';
+              let message =
                 status === 'synced'
                   ? 'Your plant record has been saved and synced to the cloud.'
-                  : 'Your plant record is saved on this phone. It will sync automatically when you are online.',
-                [
-                  {
-                    text: 'OK',
-                    onPress: () => navigation.navigate('BotanistHome'),
-                  },
-                ]
-              );
+                  : 'Your plant record is saved on this phone. It will sync automatically when you are online.';
+
+              if (editing) {
+                title = status === 'synced' ? 'Changes submitted' : 'Changes saved';
+                message =
+                  status === 'synced'
+                    ? 'Your changes were sent. The record is now Pending until an admin approves it again.'
+                    : 'Your changes are saved on this phone. They will be sent automatically when you are online, and the record will then be Pending.';
+
+                if (status === 'deleted') {
+                  title = 'Record not found';
+                  message =
+                    'This plant record no longer exists in the cloud, so the changes were not sent.';
+                }
+              }
+
+              Alert.alert(title, message, [
+                {
+                  text: 'OK',
+                  onPress: () => navigation.navigate('BotanistHome'),
+                },
+              ]);
             } catch (error) {
               setSubmitting(false);
               console.error('Save plant error:', error);
@@ -137,15 +186,33 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
           </View>
 
           <Text style={styles.title}>
-            {readOnly ? 'Plant details' : 'Review plant record'}
+            {readOnly
+              ? 'Plant details'
+              : editing
+              ? 'Review your changes'
+              : 'Review plant record'}
           </Text>
 
           <Text style={styles.subtitle}>
             {readOnly
               ? 'Explore the recorded information for this plant.'
+              : editing
+              ? 'Check your changes. Submitting sends this record back to Pending.'
               : 'Check the photos and information before submitting your record.'}
           </Text>
         </View>
+
+        {/* Status, rejection note and last updated time */}
+        {readOnly && (
+          <StatusCard
+            approval={approval}
+            isStaff={isLoggedIn}
+            waitingToSync={waitingToSync}
+            reviewer={record.reviewerName}
+            reason={record.rejectionReason}
+            lastUpdated={lastUpdated}
+          />
+        )}
 
         {/* Photos */}
         <View style={styles.section}>
@@ -360,6 +427,35 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
           </View>
         </View>
 
+        {/* Time log: staff only */}
+        {readOnly && isLoggedIn && <PlantTimeLog record={record} />}
+
+        {/* Edit: staff can edit approved and rejected records */}
+        {canEdit && (
+          <View style={styles.actions}>
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() =>
+                navigation.navigate('NewPlantRecord', { editRecord: record })
+              }
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name="create-outline"
+                size={19}
+                color={COLORS.text}
+              />
+              <Text style={styles.editButtonText}>Edit record</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.editHint}>
+              {approval === 'Approved'
+                ? 'Saving your changes sends this record back to Pending until it is approved again.'
+                : 'Saving your changes sends this record back for review.'}
+            </Text>
+          </View>
+        )}
+
         {/* Actions remain available only when not read-only */}
         {!readOnly && (
           <View style={styles.actions}>
@@ -392,7 +488,11 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
                 color={COLORS.bg}
               />
               <Text style={styles.sendButtonText}>
-                {submitting ? 'Saving...' : 'Submit record'}
+                {submitting
+                  ? 'Saving...'
+                  : editing
+                  ? 'Submit changes'
+                  : 'Submit record'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -482,6 +582,95 @@ function SectionHeading({ icon, title, subtitle }) {
           <Text style={styles.sectionSubtitle}>{subtitle}</Text>
         )}
       </View>
+    </View>
+  );
+}
+
+// Shows the status of the record. Staff also see who reviewed it and, for a
+// rejected record, the note that says why. Everyone sees the last updated
+// time of an approved record.
+function StatusCard({
+  approval,
+  isStaff,
+  waitingToSync,
+  reviewer,
+  reason,
+  lastUpdated,
+}) {
+  const { styles, COLORS } = useStyles();
+
+  // Visitors only see approved records, so they only get the updated time.
+  if (!isStaff) {
+    if (approval !== 'Approved' || !lastUpdated) return null;
+
+    return (
+      <View style={styles.section}>
+        <View style={styles.updatedRow}>
+          <Ionicons name="time-outline" size={18} color={COLORS.green} />
+          <Text style={styles.updatedLabel}>Last updated</Text>
+          <Text style={styles.updatedValue}>{lastUpdated}</Text>
+        </View>
+      </View>
+    );
+  }
+
+  const tone =
+    approval === 'Approved'
+      ? { color: COLORS.success, bg: COLORS.successBg, icon: 'checkmark-circle' }
+      : approval === 'Rejected'
+      ? { color: COLORS.error, bg: COLORS.errorBg, icon: 'close-circle' }
+      : { color: COLORS.warning, bg: COLORS.warningBg, icon: 'time' };
+
+  const title =
+    approval === 'Pending' ? 'Pending review' : approval;
+
+  let subtitle;
+
+  if (approval === 'Approved') {
+    subtitle = reviewer
+      ? `Approved by ${reviewer}`
+      : 'This record is part of the collection.';
+  } else if (approval === 'Rejected') {
+    subtitle = reviewer
+      ? `Rejected by ${reviewer}`
+      : 'This record was not accepted.';
+  } else {
+    subtitle = waitingToSync
+      ? 'Your edits are saved on this phone and waiting to be sent.'
+      : 'Waiting for an admin to review it.';
+  }
+
+  return (
+    <View style={styles.section}>
+      <View style={styles.statusTop}>
+        <View style={[styles.statusIcon, { backgroundColor: tone.bg }]}>
+          <Ionicons name={tone.icon} size={24} color={tone.color} />
+        </View>
+
+        <View style={styles.statusCopy}>
+          <Text style={[styles.statusTitle, { color: tone.color }]}>
+            {title}
+          </Text>
+          <Text style={styles.statusSubtitle}>{subtitle}</Text>
+        </View>
+      </View>
+
+      {approval === 'Rejected' && (
+        <View style={styles.reasonBox}>
+          <Text style={styles.reasonLabel}>WHY IT WAS REJECTED</Text>
+          <Text style={styles.reasonText}>
+            {reason ? reason : 'No reason was given.'}
+          </Text>
+        </View>
+      )}
+
+      {approval === 'Approved' && !!lastUpdated && (
+        <View style={styles.updatedRow}>
+          <Ionicons name="time-outline" size={18} color={COLORS.green} />
+          <Text style={styles.updatedLabel}>Last updated</Text>
+          <Text style={styles.updatedValue}>{lastUpdated}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -925,6 +1114,76 @@ const createStyles = (COLORS, pick, colors) => StyleSheet.create({
     color: COLORS.bg,
     fontSize: 13,
     fontWeight: '900',
+  },
+
+  editHint: {
+    color: COLORS.muted,
+    fontSize: 11,
+    lineHeight: 16,
+    textAlign: 'center',
+  },
+
+  statusTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 13,
+  },
+  statusIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusCopy: {
+    flex: 1,
+  },
+  statusTitle: {
+    fontSize: 17,
+    fontWeight: '900',
+  },
+  statusSubtitle: {
+    color: COLORS.muted,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 3,
+  },
+  reasonBox: {
+    marginTop: 14,
+    padding: 13,
+    borderRadius: 15,
+    backgroundColor: COLORS.errorBg,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.error,
+  },
+  reasonLabel: {
+    color: COLORS.error,
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1.3,
+    marginBottom: 6,
+  },
+  reasonText: {
+    color: COLORS.text,
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  updatedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 4,
+  },
+  updatedLabel: {
+    color: COLORS.muted,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  updatedValue: {
+    color: COLORS.text,
+    fontSize: 13,
+    fontWeight: '800',
   },
 
   footer: {

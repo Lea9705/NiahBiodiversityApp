@@ -41,6 +41,18 @@ export async function getDatabase() {
       // Column already exists - fine.
     }
 
+    // The note written when a record is rejected, the time of its last edit
+    // and the name of the person who reviewed it.
+    for (const column of ['rejectionReason', 'lastEdit', 'reviewerName']) {
+      try {
+        await dbInstance.execAsync(
+          `ALTER TABLE plants ADD COLUMN ${column} TEXT;`
+        );
+      } catch (e) {
+        // Column already exists - fine.
+      }
+    }
+
   }
   return dbInstance;
 }

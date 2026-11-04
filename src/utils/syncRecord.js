@@ -1,5 +1,5 @@
 // Shared logic for submitting a single local record to the cloud.
-import { uploadAllPhotos } from './uploadPhoto';
+import { uploadAllPhotos, uploadPhotoToS3 } from './uploadPhoto';
 import { authFetch, getUser } from './session';
 
 const API_URL = 'http://52.62.125.146/api/plants';
@@ -59,4 +59,90 @@ export async function syncRecordToCloud(record) {
   }
 
   return data;
+}
+
+// ---------------------------------------------------------------------------
+// Editing a record that is already in the cloud.
+// ---------------------------------------------------------------------------
+
+// Photos taken for an edit that were already uploaded (by their place on the
+// phone), so a retry never uploads the same photo twice.
+const uploadedEditPhotos = {};
+
+const isOnlineLink = (uri) => /^https?:\/\//i.test(String(uri || ''));
+
+async function sendJson(url, method, body) {
+  const response = await authFetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  const text = await response.text();
+  let data = null;
+
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch (e) {
+    // The reply was not JSON.
+  }
+
+  if (!response.ok) {
+    const error = new Error(
+      (data && data.error) || `Server error ${response.status}.`
+    );
+    error.status = response.status;
+    throw error;
+  }
+
+  return data || {};
+}
+
+// Sends an edited record to the cloud.
+//  1. New photos from the phone are uploaded. Photos that are already online
+//     are kept as they are.
+//  2. The record is set back to Pending (this also clears the rejection note).
+//     This is done BEFORE saving the edit, so the history entry that the edit
+//     creates is saved as Pending.
+//  3. The changes are saved.
+// If anything fails, nothing is lost: the phone keeps the edit and tries again.
+export async function syncUpdateToCloud(record) {
+  const serverId = record.serverId;
+
+  if (!serverId) {
+    throw new Error('This plant record is not in the cloud yet.');
+  }
+
+  const photoUrls = [];
+
+  for (const uri of record.photos || []) {
+    if (isOnlineLink(uri)) {
+      photoUrls.push(uri);
+      continue;
+    }
+
+    if (!uploadedEditPhotos[uri]) {
+      uploadedEditPhotos[uri] = await uploadPhotoToS3(uri, record);
+    }
+
+    photoUrls.push(uploadedEditPhotos[uri]);
+  }
+
+  await sendJson(`${API_URL}/${serverId}/status`, 'PATCH', {
+    status: 'Pending',
+    reason: null,
+  });
+
+  return sendJson(`${API_URL}/${serverId}`, 'PUT', {
+    scientificName: record.scientificName,
+    commonName: record.commonName,
+    family: record.family,
+    latitude: toNumberOrNull(record.latitude),
+    longitude: toNumberOrNull(record.longitude),
+    height: toNumberOrNull(record.height),
+    diameter_cm: toNumberOrNull(record.diameter),
+    notes: record.notes,
+    imageUrls: photoUrls,
+    change_summary: 'Edited in the mobile app. Sent back for review.',
+  });
 }

@@ -16,5 +16,9 @@ export function recordFromCloudPlant(plant) {
     photos: Array.isArray(plant.images) ? plant.images : [],
     approvalStatus: plant.plant_status,
     createdAt: plant.created_at,
+    // Why the record was rejected, when it was last edited and who reviewed it.
+    rejectionReason: plant.reason || '',
+    lastEdit: plant.last_edit || null,
+    reviewerName: plant.reviewer_name || null,
   };
 }

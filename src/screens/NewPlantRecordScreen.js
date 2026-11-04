@@ -54,8 +54,15 @@ const PALETTES = {
   },
 };
 
-export default function NewPlantRecordScreen({ navigation }) {
+const text = (value) =>
+  value === null || value === undefined ? '' : String(value);
+
+export default function NewPlantRecordScreen({ navigation, route }) {
   const { styles, COLORS, mode } = useStyles();
+
+  // Set when an approved (or rejected) record is being edited.
+  const editRecord = route?.params?.editRecord || null;
+  const editing = !!editRecord;
 
   const { isOnline, records } = useRecords();
 
@@ -63,25 +70,28 @@ export default function NewPlantRecordScreen({ navigation }) {
     (record) => record.status === 'pending'
   ).length;
 
-  const [recordId] = useState(
-    () =>
-      `plant_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+  const [recordId] = useState(() =>
+    editRecord
+      ? editRecord.id
+      : `plant_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
   );
 
-  const [photos, setPhotos] = useState([]);
+  const [photos, setPhotos] = useState(() =>
+    editRecord && Array.isArray(editRecord.photos) ? [...editRecord.photos] : []
+  );
   const [locationError, setLocationError] = useState('');
   const [locationLoading, setLocationLoading] = useState(false);
 
-  const [form, setForm] = useState({
-    scientificName: '',
-    commonName: '',
-    family: '',
-    height: '',
-    diameter: '',
-    latitude: '',
-    longitude: '',
-    notes: '',
-  });
+  const [form, setForm] = useState(() => ({
+    scientificName: text(editRecord?.scientificName),
+    commonName: text(editRecord?.commonName),
+    family: text(editRecord?.family),
+    height: text(editRecord?.height),
+    diameter: text(editRecord?.diameter),
+    latitude: text(editRecord?.latitude),
+    longitude: text(editRecord?.longitude),
+    notes: text(editRecord?.notes),
+  }));
 
   const updateField = (key, value) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -204,8 +214,10 @@ export default function NewPlantRecordScreen({ navigation }) {
     }
   };
 
+  // A new record starts with the phone's GPS. An edited record keeps its
+  // saved location until the user taps "Use current GPS location".
   useEffect(() => {
-    captureLocation();
+    if (!editing) captureLocation();
   }, []);
 
   const handleSave = () => {
@@ -218,10 +230,16 @@ export default function NewPlantRecordScreen({ navigation }) {
       id: recordId,
       ...form,
       photos,
-      createdAt: new Date().toISOString(),
+      createdAt: editRecord?.createdAt || new Date().toISOString(),
+      ...(editing
+        ? {
+            serverId: editRecord.serverId,
+            approvalStatus: editRecord.approvalStatus,
+          }
+        : {}),
     };
 
-    navigation.navigate('PlantRecordSummary', { record });
+    navigation.navigate('PlantRecordSummary', { record, editing });
   };
 
   return (
@@ -293,14 +311,19 @@ export default function NewPlantRecordScreen({ navigation }) {
           <View style={styles.pageHeading}>
             <View style={styles.eyebrow}>
               <View style={styles.eyebrowDot} />
-              <Text style={styles.eyebrowText}>FIELD OBSERVATION</Text>
+              <Text style={styles.eyebrowText}>
+                {editing ? 'EDITING A RECORD' : 'FIELD OBSERVATION'}
+              </Text>
             </View>
 
-            <Text style={styles.title}>New plant record</Text>
+            <Text style={styles.title}>
+              {editing ? 'Edit plant record' : 'New plant record'}
+            </Text>
 
             <Text style={styles.subtitle}>
-              Document the plant, capture its location and record your
-              observations for the Niah Biodiversity collection.
+              {editing
+                ? 'Change what needs fixing. When you submit, this record goes back to Pending until an admin approves it again.'
+                : 'Document the plant, capture its location and record your observations for the Niah Biodiversity collection.'}
             </Text>
           </View>
 
@@ -564,7 +587,7 @@ export default function NewPlantRecordScreen({ navigation }) {
             </View>
 
             <PrimaryButton
-              title="Add record"
+              title={editing ? 'Review changes' : 'Add record'}
               icon={
                 <Ionicons
                   name="arrow-forward-outline"

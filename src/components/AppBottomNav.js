@@ -1,29 +1,27 @@
-// The bottom bar for everyone.
-// Staff see Home, Scan, IoT, Explore. Visitors see Home, Scan, Explore (no IoT).
-// The Home button goes to the visitor home or the staff home.
+// The bottom bar for everyone: Home, Scan, Map, Explore.
+// Visitors and staff see the same bar. Only the Home button goes to a different
+// page (the visitor home or the staff home).
 import React from 'react';
 import { useNavigation } from '@react-navigation/native';
 import BottomNav from './BottomNav';
 import { useUser } from '../context/UserContext';
 
-const HOME = { key: 'home', icon: 'home-outline', label: 'Home' };
-const SCAN = { key: 'scan', icon: 'scan-outline', label: 'Scan' };
-const IOT = { key: 'iot', icon: 'hardware-chip-outline', label: 'IoT' };
-const EXPLORE = { key: 'explore', icon: 'compass-outline', label: 'Explore' };
-
-const STAFF_ITEMS = [HOME, SCAN, IOT, EXPLORE];
-const VISITOR_ITEMS = [HOME, SCAN, EXPLORE];
+const ITEMS = [
+  { key: 'home', icon: 'home-outline', label: 'Home' },
+  { key: 'scan', icon: 'scan-outline', label: 'Scan' },
+  { key: 'map', icon: 'map-outline', label: 'Map' },
+  { key: 'explore', icon: 'compass-outline', label: 'Explore' },
+];
 
 export default function AppBottomNav({ active }) {
   const navigation = useNavigation();
   const { isLoggedIn } = useUser();
 
-  const items = isLoggedIn ? STAFF_ITEMS : VISITOR_ITEMS;
-  const found = items.findIndex((item) => item.key === active);
+  const found = ITEMS.findIndex((item) => item.key === active);
   const activeIndex = found === -1 ? 0 : found;
 
   const handlePress = (index) => {
-    const target = items[index];
+    const target = ITEMS[index];
 
     if (!target || index === activeIndex) return;
 
@@ -31,7 +29,7 @@ export default function AppBottomNav({ active }) {
       navigation.navigate(isLoggedIn ? 'BotanistHome' : 'VisitorHome');
     }
     if (target.key === 'scan') navigation.navigate('ScanQR');
-    if (target.key === 'iot') navigation.navigate('Iot');
+    if (target.key === 'map') navigation.navigate('Map');
     if (target.key === 'explore') navigation.navigate('Explore');
   };
 
@@ -39,7 +37,7 @@ export default function AppBottomNav({ active }) {
     <BottomNav
       variant="botanist"
       activeIndex={activeIndex}
-      items={items.map(({ icon, label }) => ({ icon, label }))}
+      items={ITEMS.map(({ icon, label }) => ({ icon, label }))}
       onPress={handlePress}
     />
   );

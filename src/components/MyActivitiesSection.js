@@ -16,6 +16,7 @@ import { useUser } from '../context/UserContext';
 import { useRecords } from '../context/RecordsContext';
 import { authFetch } from '../utils/session';
 import { recordFromCloudPlant } from '../utils/plantRecord';
+import { formatDateTime } from '../utils/timeLog';
 import { useTheme } from '../theme/ThemeContext';
 
 const PLANTS_URL = 'http://52.62.125.146/api/plants';
@@ -109,6 +110,17 @@ function getStatusBackground(status, COLORS) {
   if (status === 'Approved') return COLORS.successBg;
   if (status === 'Rejected') return COLORS.errorBg;
   return COLORS.warningBg;
+}
+
+// The line shown under a rejected submission: the note written by the admin.
+function rejectionDetail(reason) {
+  const text = String(reason || '').replace(/\s+/g, ' ').trim();
+
+  if (!text) return 'Your submission was rejected';
+
+  const short = text.length > 90 ? `${text.slice(0, 87)}...` : text;
+
+  return `Rejected · ${short}`;
 }
 
 function toTime(value) {
@@ -273,9 +285,13 @@ export default function MyActivitiesSection() {
           let detail = 'Submitted · Waiting for approval';
 
           if (status === 'Approved') {
-            detail = 'Your submission has been approved';
+            const updated = formatDateTime(plant.last_edit);
+
+            detail = updated
+              ? `Approved · Last updated ${updated}`
+              : 'Your submission has been approved';
           } else if (status === 'Rejected') {
-            detail = 'Your submission was rejected';
+            detail = rejectionDetail(plant.reason);
           }
 
           return {
@@ -389,10 +405,27 @@ export default function MyActivitiesSection() {
   }, [records, fetchActivities]);
 
   // The cloud list plus the records still waiting on this phone.
-  const activities = useMemo(
-    () => mergeActivities(cloudActivities, buildLocalPendingItems(records)),
-    [cloudActivities, records]
-  );
+  const activities = useMemo(() => {
+    // Edits saved on this phone that are still waiting to be sent: those
+    // records already count as Pending.
+    const editing = new Set(
+      (records || [])
+        .filter((record) => record.status === 'pending' && record.serverId)
+        .map((record) => String(record.serverId))
+    );
+
+    const cloud = cloudActivities.map((item) =>
+      editing.has(String(item.id))
+        ? {
+            ...item,
+            status: 'Pending',
+            detail: 'Edits saved on this phone · Waiting to sync',
+          }
+        : item
+    );
+
+    return mergeActivities(cloud, buildLocalPendingItems(records));
+  }, [cloudActivities, records]);
 
   // Opens the same plant record page as the cards in Explore.
   const openActivity = (item) => {
@@ -400,11 +433,25 @@ export default function MyActivitiesSection() {
     // 2. already in the cloud: use the copy saved on this phone if there is one
     //    (exactly what Explore shows), otherwise build it from the cloud data
     const cloudId = String(item.plant ? item.plant.id : item.id);
+    const cloudRecord = item.plant ? recordFromCloudPlant(item.plant) : null;
 
-    const record =
+    const local =
       item.localRecord ||
-      records.find((r) => String(r.serverId ?? '') === cloudId) ||
-      (item.plant ? recordFromCloudPlant(item.plant) : null);
+      records.find((r) => String(r.serverId ?? '') === cloudId);
+
+    let record = local || cloudRecord;
+
+    // Show the newest status, rejection note and last updated time from the
+    // cloud, unless this phone has edits that are still waiting to be sent.
+    if (local && cloudRecord && local.status !== 'pending') {
+      record = {
+        ...local,
+        approvalStatus: cloudRecord.approvalStatus,
+        rejectionReason: cloudRecord.rejectionReason,
+        lastEdit: cloudRecord.lastEdit,
+        reviewerName: cloudRecord.reviewerName,
+      };
+    }
 
     if (!record) return;
 

@@ -14,7 +14,7 @@ import PlantRecordSummaryScreen from '../screens/PlantRecordSummaryScreen';
 import BotanistProfileScreen from '../screens/BotanistProfileScreen';
 import ScanQRScreen from '../screens/ScanQRScreen';
 import ExploreScreen from '../screens/ExploreScreen';
-import IotScreen from '../screens/IotScreen';
+import MapScreen from '../screens/MapScreen';
 
 import { useTheme } from '../theme/ThemeContext';
 
@@ -99,8 +99,8 @@ export default function AppNavigator() {
         />
 
         <Stack.Screen
-          name="Iot"
-          component={IotScreen}
+          name="Map"
+          component={MapScreen}
           options={{
             gestureEnabled: false,
             animationEnabled: false,
