@@ -10,6 +10,7 @@ import BotanistHeader from '../components/BotanistHeader';
 import BotanistBottomNav from '../components/BotanistBottomNav';
 import MyActivitiesSection from '../components/MyActivitiesSection';
 import { useRecords } from '../context/RecordsContext';
+import { useUser } from '../context/UserContext';
 import { useTheme } from '../theme/ThemeContext';
 
 const PALETTES = {
@@ -34,10 +35,14 @@ const PALETTES = {
 export default function BotanistHomeScreen({ navigation }) {
   const { styles, COLORS, mode } = useStyles();
 
-  const { records, isOnline } = useRecords();
+  const { records, isOnline, syncProblem } = useRecords();
+  const { user } = useUser();
 
+  // Only the records waiting on this phone that THIS account made.
   const pendingCount = records.filter(
-    (record) => record.status === 'pending'
+    (record) =>
+      record.status === 'pending' &&
+      (!record.ownerId || String(record.ownerId) === String(user?.id))
   ).length;
 
   return (
@@ -91,6 +96,29 @@ export default function BotanistHomeScreen({ navigation }) {
           </View>
         </View>
 
+        {/* Why records are stuck, when they are */}
+        {isOnline && pendingCount > 0 && !!syncProblem && (
+          <View style={styles.problemBox}>
+            <Ionicons name="alert-circle-outline" size={21} color={COLORS.warning} />
+
+            <View style={styles.problemCopy}>
+              <Text style={styles.problemTitle}>{syncProblem.message}</Text>
+
+              {!!syncProblem.detail && (
+                <Text selectable style={styles.problemDetail}>
+                  Server said: {syncProblem.detail}
+                </Text>
+              )}
+
+              <Text style={styles.problemDetail}>
+                {syncProblem.needsLogin
+                  ? 'Your records are safe on this phone. Log out and log in again, and they will be sent by themselves.'
+                  : 'Your records are safe on this phone. The app keeps trying by itself.'}
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* New plant record */}
         <View style={styles.actionGrid}>
           <View style={styles.actionItem}>
@@ -139,6 +167,36 @@ const createStyles = (COLORS, pick, colors) => StyleSheet.create({
   statusRow: {
     alignItems: 'flex-start',
     marginBottom: 24,
+  },
+
+  problemBox: {
+    flexDirection: 'row',
+    gap: 11,
+    padding: 13,
+    marginTop: -8,
+    marginBottom: 22,
+    borderRadius: 16,
+    backgroundColor: COLORS.warningBg,
+    borderWidth: 1,
+    borderColor: COLORS.warning,
+  },
+
+  problemCopy: {
+    flex: 1,
+    gap: 5,
+  },
+
+  problemTitle: {
+    color: COLORS.warning,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '800',
+  },
+
+  problemDetail: {
+    color: COLORS.warning,
+    fontSize: 11,
+    lineHeight: 16,
   },
 
   statusBadge: {

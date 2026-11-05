@@ -7,6 +7,7 @@ import { AppState } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { getDatabase } from '../db/database';
 import { syncRecordToCloud, syncUpdateToCloud } from '../utils/syncRecord';
+import { describeSyncError } from '../utils/syncProblem';
 import { useUser } from './UserContext';
 import { authFetch, getUser, getToken } from '../utils/session';
 import * as SecureStore from 'expo-secure-store';
@@ -32,6 +33,9 @@ export function RecordsProvider({ children }) {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(false);
+
+  // Why the last attempt to send a record failed (null when nothing is wrong).
+  const [syncProblem, setSyncProblem] = useState(null);
 
   const isOnlineRef = useRef(false);
   const syncingRef = useRef(false);
@@ -144,29 +148,38 @@ const updateRecordServerId = async (id, serverId) => {
 
     const response = await syncRecordToCloud(record);
 
-    return { id: response.id, isUpdate: false };
+    return {
+      id: response.id,
+      lastEdit: response.last_edit || response.lastEdit || null,
+      isUpdate: false,
+    };
   };
 
-  // After a record was sent: remember its cloud ID, mark it as sent and, for
-  // an edit, keep the "last edit" time that the cloud gave back.
+  // After a record was sent: remember its cloud ID, mark it as sent and keep
+  // the server-generated last_edit timestamp when the API returns one.
   const markRecordSent = async (id, sent) => {
-    await updateRecordServerId(id, sent.id);
-    await updateRecordStatus(id, 'synced');
+    const db = await getDatabase();
 
-    if (sent.isUpdate && sent.lastEdit) {
-      const db = await getDatabase();
+    const serverId = String(sent.id);
+    const lastEdit = sent.lastEdit || null;
 
-      await db.runAsync('UPDATE plants SET lastEdit = ? WHERE id = ?', [
-        sent.lastEdit,
-        id,
-      ]);
+    // The cloud ID and the "sent" mark are saved together, in one step, so the
+    // record never looks like "has an ID but is still waiting to be sent".
+    await db.runAsync(
+      `UPDATE plants SET serverId = ?, status = 'synced',
+         lastEdit = COALESCE(?, lastEdit) WHERE id = ?`,
+      [serverId, lastEdit, id]
+    );
 
-      setRecords((current) =>
-        current.map((r) =>
-          r.id === id ? { ...r, lastEdit: sent.lastEdit } : r
-        )
-      );
-    }
+    setRecords((current) =>
+      current.map((r) =>
+        r.id === id
+          ? { ...r, serverId, status: 'synced', ...(lastEdit ? { lastEdit } : {}) }
+          : r
+      )
+    );
+
+    setSyncProblem(null);
   };
 
   // Saves a record on the phone first. If the phone is online, it also
@@ -180,6 +193,8 @@ const updateRecordServerId = async (id, serverId) => {
       scientificName: record.scientificName || '',
       commonName: record.commonName || '',
       family: record.family || '',
+      genus: record.genus || '',
+      species: record.species || '',
       height: record.height || '',
       diameter: record.diameter || '',
       latitude: record.latitude || '',
@@ -188,6 +203,9 @@ const updateRecordServerId = async (id, serverId) => {
       photos: JSON.stringify(record.photos || []),
       status: 'pending',
       createdAt: record.createdAt || new Date().toISOString(),
+      lastEdit: record.lastEdit || null,
+      // The account that made this record.
+      ownerId: getUser()?.id != null ? String(getUser().id) : null,
     };
 
     // If online and no other sync is running, take the sync lock so the
@@ -201,13 +219,15 @@ const updateRecordServerId = async (id, serverId) => {
 
     try {
       await db.runAsync(
-        `INSERT INTO plants (id, scientificName, commonName, family, height, diameter, latitude, longitude, notes, photos, status, createdAt)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO plants (id, scientificName, commonName, family, genus, species, height, diameter, latitude, longitude, notes, photos, status, createdAt, lastEdit, ownerId)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           toSave.id,
           toSave.scientificName,
           toSave.commonName,
           toSave.family,
+          toSave.genus,
+          toSave.species,
           toSave.height,
           toSave.diameter,
           toSave.latitude,
@@ -216,6 +236,8 @@ const updateRecordServerId = async (id, serverId) => {
           toSave.photos,
           toSave.status,
           toSave.createdAt,
+          toSave.lastEdit,
+          toSave.ownerId,
         ]
       );
 
@@ -230,8 +252,7 @@ const updateRecordServerId = async (id, serverId) => {
         try {
           const response = await syncRecordToCloud(localRecord);
 
-          await updateRecordServerId(record.id, response.id);
-          await updateRecordStatus(record.id, 'synced');
+          await markRecordSent(record.id, { id: response.id, isUpdate: false });
 
           delete retryRef.current[record.id];
           finalStatus = 'synced';
@@ -242,6 +263,7 @@ const updateRecordServerId = async (id, serverId) => {
             '- keeping record pending:',
             e.message
           );
+          setSyncProblem(describeSyncError(e));
         }
       }
     } finally {
@@ -280,6 +302,8 @@ const updateRecordServerId = async (id, serverId) => {
       record.scientificName || '',
       record.commonName || '',
       record.family || '',
+      record.genus || '',
+      record.species || '',
       record.height || '',
       record.diameter || '',
       record.latitude || '',
@@ -291,24 +315,27 @@ const updateRecordServerId = async (id, serverId) => {
     if (existing) {
       await db.runAsync(
         `UPDATE plants SET
-           scientificName = ?, commonName = ?, family = ?, height = ?,
+           scientificName = ?, commonName = ?, family = ?, genus = ?, species = ?, height = ?,
            diameter = ?, latitude = ?, longitude = ?, notes = ?, photos = ?,
-           status = 'pending', approvalStatus = 'Pending', rejectionReason = NULL
+           status = 'pending', approvalStatus = 'Pending', rejectionReason = NULL,
+           ownerId = ?
          WHERE id = ?`,
-        [...values, localId]
+        [...values, getUser()?.id != null ? String(getUser().id) : null, localId]
       );
     } else {
       await db.runAsync(
         `INSERT INTO plants (
-           id, serverId, scientificName, commonName, family, height,
+           id, serverId, scientificName, commonName, family, genus, species, height,
            diameter, latitude, longitude, notes, photos, status,
-           approvalStatus, createdAt
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'Pending', ?)`,
+           approvalStatus, createdAt, lastEdit, ownerId
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'Pending', ?, ?, ?)`,
         [
           localId,
           serverId,
           ...values,
           record.createdAt || new Date().toISOString(),
+          record.lastEdit || null,
+          getUser()?.id != null ? String(getUser().id) : null,
         ]
       );
     }
@@ -348,12 +375,43 @@ const updateRecordServerId = async (id, serverId) => {
         '- keeping it pending:',
         e.message
       );
+      setSyncProblem(describeSyncError(e));
 
       return 'pending';
     } finally {
       syncingRef.current = false;
     }
   };
+
+  // Records saved before the phone remembered owners have no owner yet. They
+  // belong to whoever logs in first after this update.
+  useEffect(() => {
+    const me = getUser()?.id;
+
+    if (loading || me == null) return;
+
+    (async () => {
+      const db = await getDatabase();
+
+      await db.runAsync(
+        "UPDATE plants SET ownerId = ? WHERE ownerId IS NULL AND status = 'pending'",
+        [String(me)]
+      );
+
+      setRecords((current) =>
+        current.map((r) =>
+          r.status === 'pending' && !r.ownerId ? { ...r, ownerId: String(me) } : r
+        )
+      );
+    })().catch((error) => console.log('Could not set record owners:', error.message));
+  }, [loading, token]);
+
+  // When nothing is waiting to be sent any more, there is nothing to warn about.
+  useEffect(() => {
+    if (!records.some((r) => r.status === 'pending')) {
+      setSyncProblem(null);
+    }
+  }, [records]);
 
   const findRecordById = (id) => {
     console.log('[QR LOOKUP] Scanned ID:', id);
@@ -402,7 +460,7 @@ const updateRecordServerId = async (id, serverId) => {
       // one that was deleted.
       const linkedBefore = await db.getAllAsync(
         `SELECT id, serverId, status, approvalStatus, rejectionReason,
-                lastEdit, reviewerName
+                genus, species, lastEdit, reviewerName
          FROM plants WHERE serverId IS NOT NULL`
       );
 
@@ -462,15 +520,19 @@ const updateRecordServerId = async (id, serverId) => {
               row.approvalStatus !== cloudStatus ||
               (row.rejectionReason || '') !== reason ||
               (row.lastEdit || '') !== (cloudPlant.last_edit || '') ||
+              (row.genus || '') !== (cloudPlant.genus || '') ||
+              (row.species || '') !== (cloudPlant.species || '') ||
               (row.reviewerName || '') !== (cloudPlant.reviewer_name || '');
 
             if (differs) {
               await db.runAsync(
                 `UPDATE plants SET approvalStatus = ?, rejectionReason = ?,
-                   lastEdit = ?, reviewerName = ? WHERE id = ?`,
+                   genus = ?, species = ?, lastEdit = ?, reviewerName = ? WHERE id = ?`,
                 [
                   cloudStatus,
                   reason,
+                  cloudPlant.genus || '',
+                  cloudPlant.species || '',
                   cloudPlant.last_edit || null,
                   cloudPlant.reviewer_name || null,
                   row.id,
@@ -479,6 +541,69 @@ const updateRecordServerId = async (id, serverId) => {
               changed = true;
             }
           }
+        }
+      }
+
+      // 1b. A record the phone still thinks is unsent, but the server already
+      //     has: the server saved it, but the reply never reached the phone.
+      //     Every photo's file name starts with this phone's record ID, so the
+      //     match is exact. Sending it again would make a duplicate.
+      if (!isVisitorSync && !syncingRef.current) {
+        const unsent = await db.getAllAsync(
+          `SELECT id FROM plants WHERE status = 'pending' AND serverId IS NULL
+             AND (ownerId IS NULL OR ownerId = ?)
+           ORDER BY createdAt ASC`,
+          [String(getUser()?.id ?? '')]
+        );
+
+        const taken = new Set(linkedBefore.map((row) => String(row.serverId)));
+        const adopted = [];
+
+        for (const row of unsent) {
+          const needle = `/plants/${row.id}_`;
+
+          const found = data.find(
+            (plant) =>
+              !taken.has(String(plant.id)) &&
+              Array.isArray(plant.images) &&
+              plant.images.some((url) => String(url).includes(needle))
+          );
+
+          if (!found) continue;
+
+          taken.add(String(found.id));
+
+          const cloudStatus = normalizeApproval(found.plant_status);
+
+          await db.runAsync(
+            `UPDATE plants SET serverId = ?, status = 'synced', approvalStatus = ?,
+               rejectionReason = ?, genus = ?, species = ?, lastEdit = ?, reviewerName = ? WHERE id = ?`,
+            [
+              String(found.id),
+              cloudStatus,
+              cloudStatus === 'Rejected' ? found.reason || '' : '',
+              found.genus || '',
+              found.species || '',
+              found.last_edit || null,
+              found.reviewer_name || null,
+              row.id,
+            ]
+          );
+
+          adopted.push({ id: row.id, serverId: String(found.id), cloudStatus });
+          changed = true;
+        }
+
+        if (adopted.length > 0) {
+          setRecords((current) =>
+            current.map((r) => {
+              const hit = adopted.find((a) => a.id === r.id);
+
+              return hit
+                ? { ...r, serverId: hit.serverId, status: 'synced', approvalStatus: hit.cloudStatus }
+                : r;
+            })
+          );
         }
       }
 
@@ -499,6 +624,8 @@ const updateRecordServerId = async (id, serverId) => {
           scientificName: plant.scientific_name || '',
           commonName: plant.common_name || '',
           family: plant.family || '',
+          genus: plant.genus || '',
+          species: plant.species || '',
           height: plant.height_m != null ? String(plant.height_m) : '',
           diameter: plant.diameter_cm != null ? String(plant.diameter_cm) : '',
           latitude: plant.latitude != null ? String(plant.latitude) : '',
@@ -517,16 +644,18 @@ const updateRecordServerId = async (id, serverId) => {
         if (!existing) {
           await db.runAsync(
             `INSERT INTO plants (
-              id, serverId, scientificName, commonName, family,
+              id, serverId, scientificName, commonName, family, genus, species,
               height, diameter, latitude, longitude, notes,
               photos, status, approvalStatus, createdAt,
               rejectionReason, lastEdit, reviewerName
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
               serverId = excluded.serverId,
               scientificName = excluded.scientificName,
               commonName = excluded.commonName,
               family = excluded.family,
+              genus = excluded.genus,
+              species = excluded.species,
               height = excluded.height,
               diameter = excluded.diameter,
               latitude = excluded.latitude,
@@ -543,6 +672,8 @@ const updateRecordServerId = async (id, serverId) => {
               fields.scientificName,
               fields.commonName,
               fields.family,
+              fields.genus,
+              fields.species,
               fields.height,
               fields.diameter,
               fields.latitude,
@@ -565,6 +696,8 @@ const updateRecordServerId = async (id, serverId) => {
           existing.scientificName === fields.scientificName &&
           existing.commonName === fields.commonName &&
           existing.family === fields.family &&
+          existing.genus === fields.genus &&
+          existing.species === fields.species &&
           existing.height === fields.height &&
           existing.diameter === fields.diameter &&
           existing.latitude === fields.latitude &&
@@ -579,7 +712,7 @@ const updateRecordServerId = async (id, serverId) => {
         if (!unchanged) {
           await db.runAsync(
             `UPDATE plants SET
-              scientificName = ?, commonName = ?, family = ?, height = ?,
+              scientificName = ?, commonName = ?, family = ?, genus = ?, species = ?, height = ?,
               diameter = ?, latitude = ?, longitude = ?, notes = ?,
               photos = ?, approvalStatus = ?, rejectionReason = ?,
               lastEdit = ?, reviewerName = ?
@@ -588,6 +721,8 @@ const updateRecordServerId = async (id, serverId) => {
               fields.scientificName,
               fields.commonName,
               fields.family,
+              fields.genus,
+              fields.species,
               fields.height,
               fields.diameter,
               fields.latitude,
@@ -639,8 +774,12 @@ const updateRecordServerId = async (id, serverId) => {
       if (!isOnlineRef.current || syncingRef.current || !getUser()) return;
 
       const now = Date.now();
+      const me = String(getUser()?.id ?? '');
       const due = recordsRef.current.filter((r) => {
         if (r.status !== 'pending') return false;
+        // Only the account that made a record sends it. (A record from before
+        // the phone remembered owners belongs to whoever is logged in.)
+        if (r.ownerId && String(r.ownerId) !== me) return false;
         const retry = retryRef.current[r.id];
         return !retry || now >= retry.nextTry;
       });
@@ -667,6 +806,7 @@ const updateRecordServerId = async (id, serverId) => {
             const waitMs = Math.min(5000 * 2 ** fails, 60000);
             retryRef.current[record.id] = { fails, nextTry: Date.now() + waitMs };
             console.log('Sync failed for', record.id, '-', e.message, '- retry in', Math.round(waitMs / 1000), 's');
+            setSyncProblem(describeSyncError(e));
           }
         }
       } finally {
@@ -689,6 +829,7 @@ const updateRecordServerId = async (id, serverId) => {
         deleteRecord,
         isOnline,
         loading,
+        syncProblem,
       }}
     >
       {children}

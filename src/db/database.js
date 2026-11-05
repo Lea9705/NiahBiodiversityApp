@@ -14,6 +14,8 @@ export async function getDatabase() {
         scientificName TEXT,
         commonName TEXT,
         family TEXT,
+        genus TEXT,
+        species TEXT,
         height TEXT,
         diameter TEXT,
         latitude TEXT,
@@ -21,7 +23,8 @@ export async function getDatabase() {
         notes TEXT,
         photos TEXT,
         status TEXT,
-        createdAt TEXT
+        createdAt TEXT,
+        lastEdit TEXT
       );
     `);
 
@@ -42,8 +45,9 @@ export async function getDatabase() {
     }
 
     // The note written when a record is rejected, the time of its last edit
-    // and the name of the person who reviewed it.
-    for (const column of ['rejectionReason', 'lastEdit', 'reviewerName']) {
+    // and the name of the person who reviewed it. Also the account that
+    // made the record, so another account on the same phone never sends it.
+    for (const column of ['genus', 'species', 'rejectionReason', 'lastEdit', 'reviewerName', 'ownerId']) {
       try {
         await dbInstance.execAsync(
           `ALTER TABLE plants ADD COLUMN ${column} TEXT;`

@@ -60,7 +60,7 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
   const { styles, COLORS, mode } = useStyles();
 
   const { record, readOnly, editing } = route.params;
-  const { addRecord, updateRecord } = useRecords();
+  const { addRecord, updateRecord, syncProblem } = useRecords();
 
   // Staff are logged in. Visitors are not.
   const { isLoggedIn } = useUser();
@@ -74,6 +74,10 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
   // Status, last updated time and whether this record can be edited.
   const approval = normalizeApproval(record.approvalStatus);
   const waitingToSync = record.status === 'pending' && !!record.serverId;
+
+  // A record that has never left this phone. It is not waiting for an admin
+  // yet, because the admin cannot see it until it has been sent.
+  const notSentYet = record.status === 'pending' && !record.serverId;
   const lastUpdated = formatDateTime(record.lastEdit || record.createdAt);
 
   const canEdit =
@@ -149,6 +153,47 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
     );
   };
 
+  // A visitor may only ever see an approved plant. Every screen already passes
+  // only approved records to this page. This is a second lock: if a record that
+  // is not approved ever reaches it for a visitor, nothing of it is shown.
+  if (!isLoggedIn && readOnly && approval !== 'Approved') {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+        <StatusBar
+          barStyle={mode === 'dark' ? 'light-content' : 'dark-content'}
+          backgroundColor={COLORS.bg}
+        />
+
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.content}
+        >
+          <View style={styles.header}>
+            <BackButton onPress={() => navigation.goBack()} />
+
+            <View style={styles.headerText}>
+              <Text style={styles.brand}>NIAH BIODIVERSITY</Text>
+              <Text style={styles.headerSubtitle}>PLANT RECORD</Text>
+            </View>
+
+            <View style={styles.leafIcon}>
+              <Ionicons name="leaf" size={21} color={COLORS.green} />
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              This plant record is not available
+            </Text>
+            <Text style={styles.sectionSubtitle}>
+              Only approved plant records can be viewed without logging in.
+            </Text>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar
@@ -208,9 +253,12 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
             approval={approval}
             isStaff={isLoggedIn}
             waitingToSync={waitingToSync}
+            notSentYet={notSentYet}
+            problem={syncProblem ? syncProblem.message : ''}
             reviewer={record.reviewerName}
             reason={record.rejectionReason}
             lastUpdated={lastUpdated}
+            hasLastEdit={!!record.lastEdit}
           />
         )}
 
@@ -299,6 +347,18 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
             icon="git-branch-outline"
             label="Family"
             value={record.family}
+          />
+
+          <InfoRow
+            icon="git-branch-outline"
+            label="Genus"
+            value={record.genus}
+          />
+
+          <InfoRow
+            icon="leaf-outline"
+            label="Species"
+            value={record.species}
           />
 
           <View style={styles.divider} />
@@ -593,9 +653,12 @@ function StatusCard({
   approval,
   isStaff,
   waitingToSync,
+  notSentYet,
+  problem,
   reviewer,
   reason,
   lastUpdated,
+  hasLastEdit,
 }) {
   const { styles, COLORS } = useStyles();
 
@@ -610,6 +673,36 @@ function StatusCard({
           <Text style={styles.updatedLabel}>Last updated</Text>
           <Text style={styles.updatedValue}>{lastUpdated}</Text>
         </View>
+      </View>
+    );
+  }
+
+  // Saved only on this phone: say so, and say why when the phone knows.
+  if (notSentYet) {
+    return (
+      <View style={styles.section}>
+        <View style={styles.statusTop}>
+          <View style={[styles.statusIcon, { backgroundColor: COLORS.warningBg }]}>
+            <Ionicons name="cloud-upload-outline" size={24} color={COLORS.warning} />
+          </View>
+
+          <View style={styles.statusCopy}>
+            <Text style={[styles.statusTitle, { color: COLORS.warning }]}>
+              Not sent yet
+            </Text>
+            <Text style={styles.statusSubtitle}>
+              This record is saved on this phone. It will be sent for admin review
+              automatically when the connection allows.
+            </Text>
+          </View>
+        </View>
+
+        {!!problem && (
+          <View style={styles.reasonBox}>
+            <Text style={styles.reasonLabel}>WHY IT HAS NOT BEEN SENT</Text>
+            <Text style={styles.reasonText}>{problem}</Text>
+          </View>
+        )}
       </View>
     );
   }
@@ -664,10 +757,12 @@ function StatusCard({
         </View>
       )}
 
-      {approval === 'Approved' && !!lastUpdated && (
+      {hasLastEdit && !!lastUpdated && (
         <View style={styles.updatedRow}>
           <Ionicons name="time-outline" size={18} color={COLORS.green} />
-          <Text style={styles.updatedLabel}>Last updated</Text>
+          <Text style={styles.updatedLabel}>
+            {approval === 'Approved' ? 'Last updated' : 'Last edited'}
+          </Text>
           <Text style={styles.updatedValue}>{lastUpdated}</Text>
         </View>
       )}

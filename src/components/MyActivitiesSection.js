@@ -164,7 +164,7 @@ function toSyncedItem(record) {
     id: String(record.serverId),
     name: record.scientificName || 'Unknown plant',
     status: 'Pending',
-    detail: 'Submitted · Waiting for approval',
+    detail: 'Submitted · Waiting for admin approval',
     date: formatDate(record.createdAt),
     time: toTime(record.createdAt),
   };
@@ -230,7 +230,16 @@ export default function MyActivitiesSection() {
   const prevUnsentRef = useRef(null);
 
   // Always call the newest version of the records sync.
-  const { records, syncApprovedRecords } = useRecords();
+  const { records: allRecords, syncApprovedRecords } = useRecords();
+
+  // Records waiting on this phone that another account made are not mine.
+  const records = useMemo(
+    () =>
+      (allRecords || []).filter(
+        (record) => !record.ownerId || String(record.ownerId) === String(userId)
+      ),
+    [allRecords, userId]
+  );
   const syncRecordsRef = useRef(syncApprovedRecords);
   syncRecordsRef.current = syncApprovedRecords;
 
@@ -283,7 +292,7 @@ export default function MyActivitiesSection() {
         const formatted = myPlants.map((plant) => {
           const status = normalizeStatus(plant.plant_status);
 
-          let detail = 'Submitted · Waiting for approval';
+          let detail = 'Submitted · Waiting for admin approval';
 
           if (status === 'Approved') {
             const updated = formatDateTime(plant.last_edit);

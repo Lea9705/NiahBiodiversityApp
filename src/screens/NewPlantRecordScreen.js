@@ -86,6 +86,8 @@ export default function NewPlantRecordScreen({ navigation, route }) {
     scientificName: text(editRecord?.scientificName),
     commonName: text(editRecord?.commonName),
     family: text(editRecord?.family),
+    genus: text(editRecord?.genus),
+    species: text(editRecord?.species),
     height: text(editRecord?.height),
     diameter: text(editRecord?.diameter),
     latitude: text(editRecord?.latitude),
@@ -231,6 +233,9 @@ export default function NewPlantRecordScreen({ navigation, route }) {
       ...form,
       photos,
       createdAt: editRecord?.createdAt || new Date().toISOString(),
+      // lastEdit is supplied by the server as last_edit; the phone preserves
+      // the previous value while editing and refreshes it after cloud sync.
+      lastEdit: editRecord?.lastEdit || null,
       ...(editing
         ? {
             serverId: editRecord.serverId,
@@ -519,6 +524,20 @@ export default function NewPlantRecordScreen({ navigation, route }) {
               placeholder="e.g. Dipterocarpaceae"
               value={form.family}
               onChangeText={(value) => updateField('family', value)}
+            />
+
+            <StyledInput
+              label="Genus"
+              placeholder="e.g. Shorea"
+              value={form.genus}
+              onChangeText={(value) => updateField('genus', value)}
+            />
+
+            <StyledInput
+              label="Species"
+              placeholder="e.g. curtisii"
+              value={form.species}
+              onChangeText={(value) => updateField('species', value)}
             />
 
             <View style={styles.grid2}>

@@ -5,6 +5,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useUser } from '../context/UserContext';
+import { useRecords } from '../context/RecordsContext';
 import { useTheme } from '../theme/ThemeContext';
 
 const PALETTES = {
@@ -32,7 +33,15 @@ const PALETTES = {
 
 export default function BotanistHeader() {
   const navigation = useNavigation();
-  const { userName, logout } = useUser();
+  const { userName, logout, user } = useUser();
+  const { records } = useRecords();
+
+  // Records this account made that have not been sent yet.
+  const unsent = records.filter(
+    (r) =>
+      r.status === 'pending' &&
+      (!r.ownerId || String(r.ownerId) === String(user?.id))
+  ).length;
   const { mode, isDark, toggleTheme } = useTheme();
 
   const COLORS = PALETTES[mode];
@@ -41,7 +50,17 @@ export default function BotanistHeader() {
   const handleLogout = () => {
     Alert.alert(
       'Log out?',
-      'You will return to the start screen. Records saved on this phone stay on this phone.',
+      unsent > 0
+        ? `You have ${unsent} record${unsent === 1 ? '' : 's'} not sent yet. ${
+            unsent === 1 ? 'It stays' : 'They stay'
+          } on this phone and ${
+            unsent === 1 ? 'is' : 'are'
+          } sent automatically as soon as the phone has internet, even after you log out. Other phones can see ${
+            unsent === 1 ? 'it' : 'them'
+          } only after that. (If the phone has no internet for more than 24 hours, log in again to send ${
+            unsent === 1 ? 'it' : 'them'
+          }.)`
+        : 'You will return to the start screen. Records saved on this phone stay on this phone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {

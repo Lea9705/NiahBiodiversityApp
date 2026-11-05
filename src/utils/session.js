@@ -31,3 +31,16 @@ export function authFetch(url, options = {}) {
 
   return fetch(url, { ...options, headers });
 }
+
+// Same as authFetch, but as the account that owns the given login token,
+// whoever is (or is not) logged in right now. Used to send the records of an
+// account that has logged out.
+export function authFetchAs(token, url, options = {}) {
+  const headers = { Accept: 'application/json', ...(options.headers || {}) };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  return fetch(url, { ...options, headers });
+}

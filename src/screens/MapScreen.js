@@ -10,6 +10,7 @@ import {
   StyleSheet,
   StatusBar,
   Keyboard,
+  Platform,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -297,8 +298,10 @@ const createStyles = (FOREST) =>
       flex: 1,
       minHeight: 240,
       marginHorizontal: 18,
-      borderRadius: 18,
-      overflow: 'hidden',
+      // Clipping a WebView with rounded corners can make it draw nothing on
+      // some Android phones, so only iPhone gets the rounded, clipped corners.
+      borderRadius: Platform.OS === 'ios' ? 18 : 6,
+      overflow: Platform.OS === 'ios' ? 'hidden' : 'visible',
       borderWidth: 1,
       borderColor: FOREST.cardBorder,
       backgroundColor: FOREST.mapBackground,

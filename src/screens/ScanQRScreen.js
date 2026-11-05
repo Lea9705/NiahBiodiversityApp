@@ -98,6 +98,25 @@ function isApproved(record) {
   );
 }
 
+// Asks the server for ONE plant. This address needs no login, so visitors can
+// use it too. Returns null when the server has no such plant.
+async function fetchPlantById(id) {
+  const response = await authFetch(`${API_URL}/${encodeURIComponent(id)}`);
+
+  if (response.status === 404) return null;
+
+  if (!response.ok) {
+    const error = new Error(`API returned ${response.status}`);
+    error.status = response.status;
+    throw error;
+  }
+
+  const data = await response.json();
+  const plant = data && data.plant ? data.plant : data;
+
+  return plant && plant.id !== undefined ? plant : null;
+}
+
 function normalizeLocalPlant(record) {
   return {
     ...record,
@@ -159,6 +178,10 @@ export default function ScanQRScreen({ navigation, route }) {
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState('');
   const [lookupLoading, setLookupLoading] = useState(false);
+
+  // The size of the screen. The camera is only started once this is known and
+  // is given exactly this size (see the camera below).
+  const [cameraBox, setCameraBox] = useState(null);
 
   const isFocused = useIsFocused();
   const { records, loading: recordsLoading } = useRecords();
@@ -240,49 +263,51 @@ export default function ScanQRScreen({ navigation, route }) {
         return;
       }
 
-      // Search the API when the phone has no matching local record.
-      const response = await authFetch(API_URL);
-
-      if (!response.ok) {
-        throw new Error(`API returned ${response.status}`);
-      }
-
-      const result = await response.json();
-      const plants = Array.isArray(result)
-        ? result
-        : Array.isArray(result.plants)
-          ? result.plants
-          : [];
-
+      // The phone has no matching record, so ask the server.
       let cloudMatches = [];
 
       if (qr.type === 'id') {
-        cloudMatches = plants.filter((plant) => {
-          const id = String(plant.id ?? '').trim();
+        // A QR with a plant's ID: ask the server for just that one plant. That
+        // address needs no login, so visitors can use it too.
+        const serverId = String(qr.id).trim().replace(/^cloud-/, '');
 
-          return (
-            id === qr.id ||
-            `cloud-${id}` === qr.id
-          );
-        });
+        if (/^\d+$/.test(serverId)) {
+          const plant = await fetchPlantById(serverId);
+          cloudMatches = plant ? [plant] : [];
+        }
+        // An ID that is not a number belongs to a record that only exists on
+        // another phone, so the server cannot know it.
       } else {
+        // An older QR that only carries the plant's names: the server has to be
+        // searched, and only staff who are logged in can read the full list.
+        const response = await authFetch(API_URL);
+
+        if (!response.ok) {
+          const error = new Error(`API returned ${response.status}`);
+          error.status = response.status;
+          throw error;
+        }
+
+        const result = await response.json();
+        const plants = Array.isArray(result)
+          ? result
+          : Array.isArray(result.plants)
+            ? result.plants
+            : [];
+
         cloudMatches = plants.filter((plant) =>
           matchesPlantData(plant, qr.plant)
         );
       }
 
+      // Visitors may only open approved plants.
       if (isVisitor) {
-        cloudMatches = cloudMatches.filter((plant) =>
-          String(plant.plant_status ?? '').trim().toLowerCase() ===
-          'approved'
-        );
+        cloudMatches = cloudMatches.filter(isApproved);
       }
 
       if (cloudMatches.length === 1) {
-        const plant = cloudMatches[0];
-
         navigation.replace('PlantRecordSummary', {
-          record: recordFromCloudPlant(plant),
+          record: recordFromCloudPlant(cloudMatches[0]),
           readOnly: true,
         });
 
@@ -299,11 +324,21 @@ export default function ScanQRScreen({ navigation, route }) {
     } catch (error) {
       console.error('[QR LOOKUP] Failed:', error);
 
-      Alert.alert(
-        'Could not find plant',
-        'No matching local record was found, and the cloud could not be reached. Please try again when the API is available.',
-        [{ text: 'Try again', onPress: () => setScanned(false) }]
-      );
+      const status = error && error.status;
+      let message =
+        'This plant is not saved on this phone, and the server could not be reached. Check your internet connection and try again.';
+
+      if (status === 401 || status === 403) {
+        message = isVisitor
+          ? 'This kind of QR tag can only be opened by staff who are logged in.'
+          : 'Your login has expired. Please log out and log in again.';
+      } else if (status >= 500) {
+        message = `The server had a problem (error ${status}). Please try again in a moment.`;
+      }
+
+      Alert.alert('Could not find plant', message, [
+        { text: 'Try again', onPress: () => setScanned(false) },
+      ]);
     } finally {
       setLookupLoading(false);
     }
@@ -362,10 +397,31 @@ export default function ScanQRScreen({ navigation, route }) {
         : 'Align the QR tag within the frame';
 
   return (
-    <View style={styles.container}>
-      {isFocused && (
+    <View
+      style={styles.container}
+      onLayout={(event) => {
+        const { width, height } = event.nativeEvent.layout;
+
+        if (width > 0 && height > 0) {
+          setCameraBox((current) =>
+            current && current.width === width && current.height === height
+              ? current
+              : { width, height }
+          );
+        }
+      }}
+    >
+      {isFocused && cameraBox && (
+        // On some Android phones the camera picture stays at a wrong size if
+        // the camera starts before the screen has its final size. So it starts
+        // only after the size is known, with that exact size, and starts again
+        // if the size ever changes.
         <CameraView
-          style={StyleSheet.absoluteFillObject}
+          key={`${cameraBox.width}x${cameraBox.height}`}
+          style={[
+            styles.camera,
+            { width: cameraBox.width, height: cameraBox.height },
+          ]}
           facing="back"
           barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
           onBarcodeScanned={
@@ -414,6 +470,7 @@ export default function ScanQRScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: DARK.bg },
+  camera: { position: 'absolute', top: 0, left: 0 },
   flex: { flex: 1 },
   overlay: {
     flex: 1,

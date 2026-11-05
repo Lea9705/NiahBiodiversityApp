@@ -8,6 +8,8 @@ export function recordFromCloudPlant(plant) {
     scientificName: plant.scientific_name || '',
     commonName: plant.common_name || '',
     family: plant.family || '',
+    genus: plant.genus || '',
+    species: plant.species || '',
     height: plant.height_m == null ? '' : String(plant.height_m),
     diameter: plant.diameter_cm == null ? '' : String(plant.diameter_cm),
     latitude: plant.latitude == null ? '' : String(plant.latitude),
