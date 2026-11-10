@@ -1,3 +1,4 @@
+
 // A single shared SQLite database file, stored on the phone. Persists
 // across app restarts.
 import * as SQLite from 'expo-sqlite';
@@ -28,26 +29,18 @@ export async function getDatabase() {
       );
     `);
 
-    // Older installs may not have this column. Adding it is safe to try
-    // every time; it fails harmlessly if it already exists.
-    try {
-      await dbInstance.execAsync('ALTER TABLE plants ADD COLUMN serverId TEXT;');
-    } catch (e) {
-      // Column already exists - fine.
-    }
-
-    try {
-      await dbInstance.execAsync(
-        'ALTER TABLE plants ADD COLUMN approvalStatus TEXT;'
-      );
-    } catch (e) {
-      // Column already exists - fine.
-    }
-
-    // The note written when a record is rejected, the time of its last edit
-    // and the name of the person who reviewed it. Also the account that
-    // made the record, so another account on the same phone never sends it.
-    for (const column of ['genus', 'species', 'rejectionReason', 'lastEdit', 'reviewerName', 'ownerId']) {
+    // Add missing columns safely without deleting existing records.
+    for (const column of [
+      'serverId',
+      'approvalStatus',
+      'genus',
+      'species',
+      'rejectionReason',
+      'lastEdit',
+      'reviewerName',
+      'ownerId',
+      'conservationStatus',
+    ]) {
       try {
         await dbInstance.execAsync(
           `ALTER TABLE plants ADD COLUMN ${column} TEXT;`
@@ -56,7 +49,7 @@ export async function getDatabase() {
         // Column already exists - fine.
       }
     }
-
   }
+
   return dbInstance;
 }

@@ -20,6 +20,7 @@ import PlantTimeLog from '../components/PlantTimeLog';
 import { useTheme } from '../theme/ThemeContext';
 import { normalizeApproval } from '../utils/approval';
 import { formatDateTime } from '../utils/timeLog';
+import { formatConservationStatus } from '../utils/conservationStatus';
 
 const PALETTES = {
   dark: {
@@ -266,7 +267,7 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
         <View style={styles.section}>
           <SectionHeading
             icon="images-outline"
-            title="Plant photos"
+            title="Plant Photos"
             subtitle={
               photos.length > 0
                 ? `${photos.length} photo${photos.length === 1 ? '' : 's'}`
@@ -323,20 +324,20 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
         <View style={styles.section}>
           <SectionHeading
             icon="leaf-outline"
-            title="Plant information"
-            subtitle="Species and physical measurements"
+            title="Plant Information"
+            subtitle="Species and Physical Measurements"
           />
 
           <View style={styles.infoGrid}>
             <View style={styles.infoTile}>
-              <Text style={styles.label}>Common name</Text>
+              <Text style={styles.label}>Common Name</Text>
               <Text style={styles.tileValue}>
                 {record.commonName || 'Not provided'}
               </Text>
             </View>
 
             <View style={styles.infoTile}>
-              <Text style={styles.label}>Scientific name</Text>
+              <Text style={styles.label}>Scientific Name</Text>
               <Text style={[styles.tileValue, styles.scientificValue]}>
                 {record.scientificName || 'Not provided'}
               </Text>
@@ -359,6 +360,12 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
             icon="leaf-outline"
             label="Species"
             value={record.species}
+          />
+
+          <InfoRow
+            icon="shield-checkmark-outline"
+            label="Conservation Status"
+            value={formatConservationStatus(record.conservationStatus)}
           />
 
           <View style={styles.divider} />
@@ -398,8 +405,8 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
         <View style={styles.section}>
           <SectionHeading
             icon="location-outline"
-            title="GPS location"
-            subtitle="Recorded coordinates"
+            title="GPS Location"
+            subtitle="Recorded Coordinates"
           />
 
           <View style={styles.locationBanner}>
@@ -439,7 +446,7 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
         <View style={styles.section}>
           <SectionHeading
             icon="document-text-outline"
-            title="Morphological notes"
+            title="Morphological Notes"
             subtitle="Plant characteristics and observations"
           />
 
@@ -455,7 +462,7 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
         <View style={styles.section}>
           <SectionHeading
             icon="qr-code-outline"
-            title="Plant QR code"
+            title="Plant QR Code"
             subtitle="Scan to identify this record"
           />
 

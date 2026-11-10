@@ -96,34 +96,34 @@ export function RecordsProvider({ children }) {
   }, [isOnline, loading, token]);
 
   const updateRecordStatus = async (id, status) => {
-  const db = await getDatabase();
+    const db = await getDatabase();
 
-  await db.runAsync(
-    'UPDATE plants SET status = ? WHERE id = ?',
-    [status, id]
-  );
+    await db.runAsync(
+      'UPDATE plants SET status = ? WHERE id = ?',
+      [status, id]
+    );
 
-  setRecords((current) =>
-    current.map((r) => (r.id === id ? { ...r, status } : r))
-  );
-};
+    setRecords((current) =>
+      current.map((r) => (r.id === id ? { ...r, status } : r))
+    );
+  };
 
-const updateRecordServerId = async (id, serverId) => {
-  if (serverId === null || serverId === undefined) return;
+  const updateRecordServerId = async (id, serverId) => {
+    if (serverId === null || serverId === undefined) return;
 
-  const db = await getDatabase();
+    const db = await getDatabase();
 
-  await db.runAsync(
-    'UPDATE plants SET serverId = ? WHERE id = ?',
-    [String(serverId), id]
-  );
+    await db.runAsync(
+      'UPDATE plants SET serverId = ? WHERE id = ?',
+      [String(serverId), id]
+    );
 
-  setRecords((current) =>
-    current.map((r) =>
-      r.id === id ? { ...r, serverId: String(serverId) } : r
-    )
-  );
-};
+    setRecords((current) =>
+      current.map((r) =>
+        r.id === id ? { ...r, serverId: String(serverId) } : r
+      )
+    );
+  };
 
   // Reads one record from the phone's database.
   const readRecordRow = async (id) => {
@@ -195,6 +195,7 @@ const updateRecordServerId = async (id, serverId) => {
       family: record.family || '',
       genus: record.genus || '',
       species: record.species || '',
+      conservationStatus: record.conservationStatus || '',
       height: record.height || '',
       diameter: record.diameter || '',
       latitude: record.latitude || '',
@@ -219,8 +220,8 @@ const updateRecordServerId = async (id, serverId) => {
 
     try {
       await db.runAsync(
-        `INSERT INTO plants (id, scientificName, commonName, family, genus, species, height, diameter, latitude, longitude, notes, photos, status, createdAt, lastEdit, ownerId)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO plants (id, scientificName, commonName, family, genus, species, conservationStatus, height, diameter, latitude, longitude, notes, photos, status, createdAt, lastEdit, ownerId)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           toSave.id,
           toSave.scientificName,
@@ -228,6 +229,7 @@ const updateRecordServerId = async (id, serverId) => {
           toSave.family,
           toSave.genus,
           toSave.species,
+          toSave.conservationStatus,
           toSave.height,
           toSave.diameter,
           toSave.latitude,
@@ -275,7 +277,7 @@ const updateRecordServerId = async (id, serverId) => {
     return finalStatus;
   };
 
-  // Saves an edited plant record. The record goes back to Pending. The edit is
+    // Saves an edited plant record. The record goes back to Pending. The edit is
   // sent to the cloud right away when the phone is online, or later when it is.
   // Returns 'synced', 'pending' (saved on this phone, waiting to be sent) or
   // 'deleted' (the record no longer exists in the cloud).
@@ -304,6 +306,7 @@ const updateRecordServerId = async (id, serverId) => {
       record.family || '',
       record.genus || '',
       record.species || '',
+      record.conservationStatus || '',
       record.height || '',
       record.diameter || '',
       record.latitude || '',
@@ -315,7 +318,7 @@ const updateRecordServerId = async (id, serverId) => {
     if (existing) {
       await db.runAsync(
         `UPDATE plants SET
-           scientificName = ?, commonName = ?, family = ?, genus = ?, species = ?, height = ?,
+           scientificName = ?, commonName = ?, family = ?, genus = ?, species = ?, conservationStatus = ?, height = ?,
            diameter = ?, latitude = ?, longitude = ?, notes = ?, photos = ?,
            status = 'pending', approvalStatus = 'Pending', rejectionReason = NULL,
            ownerId = ?
@@ -325,10 +328,10 @@ const updateRecordServerId = async (id, serverId) => {
     } else {
       await db.runAsync(
         `INSERT INTO plants (
-           id, serverId, scientificName, commonName, family, genus, species, height,
+           id, serverId, scientificName, commonName, family, genus, species, conservationStatus, height,
            diameter, latitude, longitude, notes, photos, status,
            approvalStatus, createdAt, lastEdit, ownerId
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'Pending', ?, ?, ?)`,
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'Pending', ?, ?, ?)`,
         [
           localId,
           serverId,
@@ -460,7 +463,7 @@ const updateRecordServerId = async (id, serverId) => {
       // one that was deleted.
       const linkedBefore = await db.getAllAsync(
         `SELECT id, serverId, status, approvalStatus, rejectionReason,
-                genus, species, lastEdit, reviewerName
+                genus, species, conservationStatus, lastEdit, reviewerName
          FROM plants WHERE serverId IS NOT NULL`
       );
 
@@ -522,17 +525,19 @@ const updateRecordServerId = async (id, serverId) => {
               (row.lastEdit || '') !== (cloudPlant.last_edit || '') ||
               (row.genus || '') !== (cloudPlant.genus || '') ||
               (row.species || '') !== (cloudPlant.species || '') ||
+              (row.conservationStatus || '') !== (cloudPlant.conservation_status || '') ||
               (row.reviewerName || '') !== (cloudPlant.reviewer_name || '');
 
             if (differs) {
               await db.runAsync(
                 `UPDATE plants SET approvalStatus = ?, rejectionReason = ?,
-                   genus = ?, species = ?, lastEdit = ?, reviewerName = ? WHERE id = ?`,
+                   genus = ?, species = ?, conservationStatus = ?, lastEdit = ?, reviewerName = ? WHERE id = ?`,
                 [
                   cloudStatus,
                   reason,
                   cloudPlant.genus || '',
                   cloudPlant.species || '',
+                  cloudPlant.conservation_status || '',
                   cloudPlant.last_edit || null,
                   cloudPlant.reviewer_name || null,
                   row.id,
@@ -544,7 +549,7 @@ const updateRecordServerId = async (id, serverId) => {
         }
       }
 
-      // 1b. A record the phone still thinks is unsent, but the server already
+            // 1b. A record the phone still thinks is unsent, but the server already
       //     has: the server saved it, but the reply never reached the phone.
       //     Every photo's file name starts with this phone's record ID, so the
       //     match is exact. Sending it again would make a duplicate.
@@ -577,13 +582,14 @@ const updateRecordServerId = async (id, serverId) => {
 
           await db.runAsync(
             `UPDATE plants SET serverId = ?, status = 'synced', approvalStatus = ?,
-               rejectionReason = ?, genus = ?, species = ?, lastEdit = ?, reviewerName = ? WHERE id = ?`,
+               rejectionReason = ?, genus = ?, species = ?, conservationStatus = ?, lastEdit = ?, reviewerName = ? WHERE id = ?`,
             [
               String(found.id),
               cloudStatus,
               cloudStatus === 'Rejected' ? found.reason || '' : '',
               found.genus || '',
               found.species || '',
+              found.conservation_status || '',
               found.last_edit || null,
               found.reviewer_name || null,
               row.id,
@@ -626,6 +632,7 @@ const updateRecordServerId = async (id, serverId) => {
           family: plant.family || '',
           genus: plant.genus || '',
           species: plant.species || '',
+          conservationStatus: plant.conservation_status || '',
           height: plant.height_m != null ? String(plant.height_m) : '',
           diameter: plant.diameter_cm != null ? String(plant.diameter_cm) : '',
           latitude: plant.latitude != null ? String(plant.latitude) : '',
@@ -645,10 +652,10 @@ const updateRecordServerId = async (id, serverId) => {
           await db.runAsync(
             `INSERT INTO plants (
               id, serverId, scientificName, commonName, family, genus, species,
-              height, diameter, latitude, longitude, notes,
+              conservationStatus, height, diameter, latitude, longitude, notes,
               photos, status, approvalStatus, createdAt,
               rejectionReason, lastEdit, reviewerName
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
               serverId = excluded.serverId,
               scientificName = excluded.scientificName,
@@ -656,6 +663,7 @@ const updateRecordServerId = async (id, serverId) => {
               family = excluded.family,
               genus = excluded.genus,
               species = excluded.species,
+              conservationStatus = excluded.conservationStatus,
               height = excluded.height,
               diameter = excluded.diameter,
               latitude = excluded.latitude,
@@ -674,6 +682,7 @@ const updateRecordServerId = async (id, serverId) => {
               fields.family,
               fields.genus,
               fields.species,
+              fields.conservationStatus,
               fields.height,
               fields.diameter,
               fields.latitude,
@@ -698,6 +707,7 @@ const updateRecordServerId = async (id, serverId) => {
           existing.family === fields.family &&
           existing.genus === fields.genus &&
           existing.species === fields.species &&
+          (existing.conservationStatus || '') === fields.conservationStatus &&
           existing.height === fields.height &&
           existing.diameter === fields.diameter &&
           existing.latitude === fields.latitude &&
@@ -712,7 +722,7 @@ const updateRecordServerId = async (id, serverId) => {
         if (!unchanged) {
           await db.runAsync(
             `UPDATE plants SET
-              scientificName = ?, commonName = ?, family = ?, genus = ?, species = ?, height = ?,
+              scientificName = ?, commonName = ?, family = ?, genus = ?, species = ?, conservationStatus = ?, height = ?,
               diameter = ?, latitude = ?, longitude = ?, notes = ?,
               photos = ?, approvalStatus = ?, rejectionReason = ?,
               lastEdit = ?, reviewerName = ?
@@ -723,6 +733,7 @@ const updateRecordServerId = async (id, serverId) => {
               fields.family,
               fields.genus,
               fields.species,
+              fields.conservationStatus,
               fields.height,
               fields.diameter,
               fields.latitude,
