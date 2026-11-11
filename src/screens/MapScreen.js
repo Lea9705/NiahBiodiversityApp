@@ -76,8 +76,11 @@ export default function MapScreen({ navigation }) {
 
   // The pins. Approved plants with a location, minus threatened plants.
   const pins = useMemo(
-    () => buildMapPins(records, { search }),
-    [records, search]
+    () => buildMapPins(records, {
+      search,
+      isBotanist: isLoggedIn,
+    }),
+    [records, search, isLoggedIn]
   );
 
   const openPin = (id) => {

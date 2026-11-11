@@ -21,6 +21,8 @@ import { useTheme } from '../theme/ThemeContext';
 import { normalizeApproval } from '../utils/approval';
 import { formatDateTime } from '../utils/timeLog';
 import { formatConservationStatus } from '../utils/conservationStatus';
+import { canViewPlantLocation } from '../utils/locationAccess';
+
 
 const PALETTES = {
   dark: {
@@ -65,6 +67,10 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
 
   // Staff are logged in. Visitors are not.
   const { isLoggedIn } = useUser();
+  const canViewLocation = canViewPlantLocation(
+    record,
+    isLoggedIn
+  );
 
   const [submitting, setSubmitting] = useState(false);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(null);
@@ -401,46 +407,50 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
           </View>
         </View>
 
-        {/* GPS */}
-        <View style={styles.section}>
-          <SectionHeading
-            icon="location-outline"
-            title="GPS Location"
-            subtitle="Recorded Coordinates"
-          />
+        
+{/* GPS */}
+{canViewLocation && (
+  <View style={styles.section}>
+    <SectionHeading
+      icon="location-outline"
+      title="GPS Location"
+      subtitle="Recorded Coordinates"
+    />
 
-          <View style={styles.locationBanner}>
-            <View style={styles.locationIcon}>
-              <Ionicons
-                name="navigate-outline"
-                size={22}
-                color={COLORS.green}
-              />
-            </View>
-            <View style={styles.locationCopy}>
-              <Text style={styles.locationTitle}>Field coordinates</Text>
-              <Text style={styles.locationSubtitle}>
-                Geographic position captured for this record
-              </Text>
-            </View>
-          </View>
+    <View style={styles.locationBanner}>
+      <View style={styles.locationIcon}>
+        <Ionicons
+          name="navigate-outline"
+          size={22}
+          color={COLORS.green}
+        />
+      </View>
+      <View style={styles.locationCopy}>
+        <Text style={styles.locationTitle}>Field coordinates</Text>
+        <Text style={styles.locationSubtitle}>
+          Geographic position captured for this record
+        </Text>
+      </View>
+    </View>
 
-          <View style={styles.coordinateRow}>
-            <View style={styles.coordinateItem}>
-              <Text style={styles.label}>LATITUDE</Text>
-              <Text style={styles.coordinateValue}>
-                {record.latitude || 'Not provided'}
-              </Text>
-            </View>
+    <View style={styles.coordinateRow}>
+      <View style={styles.coordinateItem}>
+        <Text style={styles.label}>LATITUDE</Text>
+        <Text style={styles.coordinateValue}>
+          {record.latitude || 'Not provided'}
+        </Text>
+      </View>
 
-            <View style={styles.coordinateItem}>
-              <Text style={styles.label}>LONGITUDE</Text>
-              <Text style={styles.coordinateValue}>
-                {record.longitude || 'Not provided'}
-              </Text>
-            </View>
-          </View>
-        </View>
+      <View style={styles.coordinateItem}>
+        <Text style={styles.label}>LONGITUDE</Text>
+        <Text style={styles.coordinateValue}>
+          {record.longitude || 'Not provided'}
+        </Text>
+      </View>
+    </View>
+  </View>
+)}
+
 
         {/* Notes */}
         <View style={styles.section}>
