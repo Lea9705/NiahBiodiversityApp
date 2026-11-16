@@ -103,7 +103,7 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
   // A record that has never left this phone. It is not waiting for an admin
   // yet, because the admin cannot see it until it has been sent.
   const notSentYet = record.status === 'pending' && !record.serverId;
-  const lastUpdated = formatDateTime(record.lastEdit || record.createdAt);
+  const lastUpdated = formatDateTime(record.lastEdit || record.createdAt || record.created_at);
 
   const canEdit =
     !!readOnly &&
@@ -794,7 +794,7 @@ function StatusCard({
         </View>
       )}
 
-      {hasLastEdit && !!lastUpdated && (
+      {!!lastUpdated && (
         <View style={styles.updatedRow}>
           <Ionicons name="time-outline" size={18} color={COLORS.green} />
           <Text style={styles.updatedLabel}>

@@ -19,6 +19,7 @@ export function normalizeLiveStatus(plant) {
     reviewer: plant.reviewer_name ? String(plant.reviewer_name) : '',
     reason: plant.reason ? String(plant.reason) : '',
     lastEdit: plant.last_edit || null,
+    createdAt: plant.created_at || null,
   };
 }
 
@@ -47,6 +48,7 @@ export function mergeLiveStatus(record, live) {
     reviewerName: live.reviewer || record.reviewerName,
     rejectionReason: live.status === 'Rejected' ? live.reason : '',
     lastEdit: live.lastEdit || record.lastEdit,
+    createdAt: record.createdAt || live.createdAt,
   };
 }
 
