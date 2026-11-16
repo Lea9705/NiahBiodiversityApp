@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  FlatList,
+  Dimensions,
   Image,
   Alert,
   StatusBar,
@@ -60,6 +62,11 @@ const PALETTES = {
   },
 };
 
+const HERO_WIDTH = Dimensions.get('window').width;
+
+
+const PHOTO_VIEWER_WIDTH = Dimensions.get('window').width;
+const PHOTO_VIEWER_HEIGHT = Dimensions.get('window').height;
 export default function PlantRecordSummaryScreen({ navigation, route }) {
   const { styles, COLORS, mode } = useStyles();
 
@@ -230,42 +237,74 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <BackButton onPress={() => navigation.goBack()} />
-
-          <View style={styles.headerText}>
-            <Text style={styles.brand}>NIAH BIODIVERSITY</Text>
-            <Text style={styles.headerSubtitle}>
-              {readOnly ? 'PLANT RECORD' : 'RECORD REVIEW'}
-            </Text>
-          </View>
-
-          <View style={styles.leafIcon}>
-            <Ionicons name="leaf" size={21} color={COLORS.green} />
+        {/* Full-width plant photo hero header */}
+        <View style={styles.photoHero}>
+          {photos.length > 0 ? (
+            <ScrollView
+              horizontal
+              pagingEnabled
+              decelerationRate="fast"
+              showsHorizontalScrollIndicator={false}
+              style={styles.heroPager}
+            >
+              {photos.map((uri, index) => (
+                <TouchableOpacity
+                  key={`hero-${uri}-${index}`}
+                  activeOpacity={0.95}
+                  onPress={() => setSelectedPhotoIndex(index)}
+                  style={styles.heroSlide}
+                >
+                  <Image source={{ uri }} style={styles.heroImage} resizeMode="cover" />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          ) : (
+            <View style={styles.heroEmpty}>
+              <Ionicons name="leaf-outline" size={42} color={COLORS.muted} />
+              <Text style={styles.emptyPhotosText}>No plant photos available</Text>
             </View>
+          )}
+          <View style={styles.heroTopControls}>
+            <TouchableOpacity
+              style={styles.heroBackButton}
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+            {photos.length > 0 && (
+              <View style={styles.heroPhotoCount}>
+                <Ionicons name="images-outline" size={13} color="#FFFFFF" />
+                <Text style={styles.heroPhotoCountText}>{photos.length} photos</Text>
+              </View>
+            )}
           </View>
+        </View>
 
         {/* Page title */}
         <View style={styles.pageHeading}>
           <View style={styles.eyebrow}>
             <View style={styles.eyebrowDot} />
             <Text style={styles.eyebrowText}>
-              {readOnly ? 'BIODIVERSITY COLLECTION' : 'FIELD OBSERVATION'}
+              {readOnly ? 'SPECIES PROFILE' : editing ? 'RECORD UPDATE' : 'NEW FIELD RECORD'}
             </Text>
           </View>
 
           <Text style={styles.title}>
             {readOnly
-              ? 'Plant details'
+              ? (record.commonName || 'Plant details')
               : editing
               ? 'Review your changes'
               : 'Review plant record'}
           </Text>
 
+          {!!record.scientificName && readOnly && (
+            <Text style={styles.identityScientific}>{record.scientificName}</Text>
+          )}
+
           <Text style={styles.subtitle}>
             {readOnly
-              ? 'Explore the recorded information for this plant.'
+              ? 'Explore the classification, conservation status and field observations for this species.'
               : editing
               ? 'Check your changes. Submitting sends this record back to Pending.'
               : 'Check the photos and information before submitting your record.'}
@@ -286,63 +325,6 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
             hasLastEdit={!!record.lastEdit}
           />
         )}
-
-        {/* Photos */}
-        <View style={styles.section}>
-          <SectionHeading
-            icon="images-outline"
-            title="Plant Photos"
-            subtitle={
-              photos.length > 0
-                ? `${photos.length} photo${photos.length === 1 ? '' : 's'}`
-                : 'No photos added'
-            }
-          />
-
-          {photos.length > 0 ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.photoList}
-            >
-              {photos.map((uri, index) => (
-                <TouchableOpacity
-                  key={`${uri}-${index}`}
-                  style={styles.photoCard}
-                  onPress={() => setSelectedPhotoIndex(index)}
-                  activeOpacity={0.85}
-                >
-                  <Image
-                    source={{ uri }}
-                    style={styles.photo}
-                    resizeMode="cover"
-                  />
-                  <View style={styles.photoExpand}>
-                    <Ionicons
-                      name="expand-outline"
-                      size={15}
-                      color={COLORS.text}
-                    />
-                  </View>
-                  <Text style={styles.photoLabel}>
-                    PHOTO {String(index + 1).padStart(2, '0')}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          ) : (
-            <View style={styles.emptyPhotos}>
-              <Ionicons
-                name="image-outline"
-                size={27}
-                color={COLORS.muted}
-              />
-              <Text style={styles.emptyPhotosText}>
-                No plant photos available
-              </Text>
-            </View>
-          )}
-        </View>
 
         {/* Plant information */}
         <View style={styles.section}>
@@ -614,10 +596,37 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
             </TouchableOpacity>
           </View>
 
-          <Image
-            source={{ uri: photos[selectedPhotoIndex] }}
-            style={styles.fullScreenPhoto}
-            resizeMode="contain"
+          <FlatList
+            data={photos}
+            horizontal
+            pagingEnabled
+            initialScrollIndex={selectedPhotoIndex}
+            getItemLayout={(_, index) => ({
+              length: PHOTO_VIEWER_WIDTH - 30,
+              offset: (PHOTO_VIEWER_WIDTH - 30) * index,
+              index,
+            })}
+            keyExtractor={(uri, index) => `viewer-${uri}-${index}`}
+            showsHorizontalScrollIndicator={false}
+            decelerationRate="fast"
+            style={styles.fullScreenPhotoPager}
+            contentContainerStyle={styles.fullScreenPhotoPagerContent}
+            onMomentumScrollEnd={(event) => {
+              const pageWidth = PHOTO_VIEWER_WIDTH - 30;
+              const nextIndex = Math.round(
+                event.nativeEvent.contentOffset.x / pageWidth
+              );
+              setSelectedPhotoIndex(nextIndex);
+            }}
+            renderItem={({ item }) => (
+              <View style={styles.fullScreenPhotoSlide}>
+                <Image
+                  source={{ uri: item }}
+                  style={styles.fullScreenPhoto}
+                  resizeMode="contain"
+                />
+              </View>
+            )}
           />
 
           {photos.length > 1 && (
@@ -631,11 +640,7 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
                 }
                 accessibilityLabel="Previous photo"
               >
-                <Ionicons
-                  name="chevron-back"
-                  size={25}
-                  color={COLORS.text}
-                />
+                <Ionicons name="chevron-back" size={25} color={COLORS.text} />
               </TouchableOpacity>
 
               <Text style={styles.photoCounter}>
@@ -651,11 +656,7 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
                 }
                 accessibilityLabel="Next photo"
               >
-                <Ionicons
-                  name="chevron-forward"
-                  size={25}
-                  color={COLORS.text}
-                />
+                <Ionicons name="chevron-forward" size={25} color={COLORS.text} />
               </TouchableOpacity>
             </View>
           )}
@@ -845,8 +846,68 @@ const createStyles = (COLORS, pick, colors) => StyleSheet.create({
   },
   content: {
     paddingHorizontal: 18,
-    paddingTop: 12,
-    paddingBottom: 38,
+    paddingTop: 0,
+    paddingBottom: 42,
+  },
+
+  photoHero: {
+    height: 340,
+    marginTop: 0,
+    marginHorizontal: -18,
+    marginBottom: 26,
+    overflow: 'hidden',
+    backgroundColor: COLORS.surfaceLight,
+    position: 'relative',
+  },
+  heroPager: {
+    flex: 1,
+  },
+  heroSlide: {
+    width: HERO_WIDTH,
+    height: '100%',
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  },
+  heroEmpty: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  heroTopControls: {
+    position: 'absolute',
+    top: 16,
+    left: 18,
+    right: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  heroBackButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 15,
+    backgroundColor: 'rgba(0,0,0,0.42)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroPhotoCount: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.42)',
+  },
+  heroPhotoCountText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '800',
   },
 
   header: {
@@ -891,7 +952,8 @@ const createStyles = (COLORS, pick, colors) => StyleSheet.create({
   },
 
   pageHeading: {
-    marginBottom: 24,
+    marginBottom: 18,
+    paddingHorizontal: 2,
   },
   eyebrow: {
     flexDirection: 'row',
@@ -913,10 +975,10 @@ const createStyles = (COLORS, pick, colors) => StyleSheet.create({
   },
   title: {
     color: COLORS.text,
-    fontSize: 29,
-    lineHeight: 35,
+    fontSize: 27,
+    lineHeight: 33,
     fontWeight: '900',
-    letterSpacing: -0.8,
+    letterSpacing: -0.7,
   },
   subtitle: {
     color: COLORS.muted,
@@ -924,25 +986,33 @@ const createStyles = (COLORS, pick, colors) => StyleSheet.create({
     lineHeight: 19,
     marginTop: 8,
   },
+  identityScientific: {
+    color: COLORS.green,
+    fontSize: 16,
+    lineHeight: 22,
+    fontStyle: 'italic',
+    fontWeight: '700',
+    marginTop: 5,
+  },
 
   section: {
     backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 21,
-    padding: 15,
-    marginBottom: 15,
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 12,
   },
   sectionHeading: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 11,
-    marginBottom: 18,
+    marginBottom: 14,
   },
   sectionIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
+    width: 40,
+    height: 40,
+    borderRadius: 13,
     backgroundColor: COLORS.surfaceLight,
     alignItems: 'center',
     justifyContent: 'center',
@@ -952,9 +1022,9 @@ const createStyles = (COLORS, pick, colors) => StyleSheet.create({
   },
   sectionTitle: {
     color: COLORS.text,
-    fontSize: 15,
-    fontWeight: '800',
-    letterSpacing: -0.2,
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: -0.3,
   },
   sectionSubtitle: {
     color: COLORS.muted,
@@ -963,44 +1033,6 @@ const createStyles = (COLORS, pick, colors) => StyleSheet.create({
     marginTop: 4,
   },
 
-  photoList: {
-    gap: 12,
-    paddingBottom: 2,
-  },
-  photoCard: {
-    width: 148,
-    padding: 7,
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  photo: {
-    width: '100%',
-    height: 133,
-    borderRadius: 10,
-    backgroundColor: COLORS.bg,
-  },
-  photoExpand: {
-    position: 'absolute',
-    right: 13,
-    top: 13,
-    width: 29,
-    height: 29,
-    borderRadius: 10,
-    backgroundColor: pick('#0B1712DD', 'rgba(255, 255, 255, 0.92)'),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  photoLabel: {
-    color: COLORS.muted,
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 1.1,
-    paddingHorizontal: 3,
-    paddingTop: 9,
-    paddingBottom: 3,
-  },
   emptyPhotos: {
     minHeight: 105,
     alignItems: 'center',
@@ -1022,8 +1054,8 @@ const createStyles = (COLORS, pick, colors) => StyleSheet.create({
   },
   infoTile: {
     backgroundColor: COLORS.surfaceLight,
-    borderRadius: 13,
-    padding: 13,
+    borderRadius: 16,
+    padding: 15,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
@@ -1352,30 +1384,45 @@ const createStyles = (COLORS, pick, colors) => StyleSheet.create({
     fontWeight: '800',
   },
   closePhoto: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
+    width: 48,
+    height: 48,
+    borderRadius: 16,
     backgroundColor: COLORS.surfaceLight,
     borderWidth: 1,
     borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  fullScreenPhotoPager: {
+    width: '100%',
+    height: '82%',
+    marginTop: 54,
+  },
+  fullScreenPhotoPagerContent: {
+    alignItems: 'center',
+  },
+  fullScreenPhotoSlide: {
+    width: PHOTO_VIEWER_WIDTH - 30,
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   fullScreenPhoto: {
     width: '100%',
-    height: '72%',
+    height: '100%',
   },
   photoNavigation: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    width: '70%',
-    marginTop: 20,
+    width: '76%',
+    marginTop: 12,
+    marginBottom: 14,
   },
   photoNavButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
+    width: 50,
+    height: 50,
+    borderRadius: 16,
     backgroundColor: COLORS.surfaceLight,
     alignItems: 'center',
     justifyContent: 'center',

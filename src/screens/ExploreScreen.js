@@ -375,9 +375,9 @@ const createStyles = (FOREST, pick, colors) => StyleSheet.create({
   },
 
   listContent: {
-    paddingHorizontal: 18,
-    paddingTop: 13,
-    paddingBottom: 8,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 12,
     flexGrow: 1,
   },
 
@@ -385,11 +385,11 @@ const createStyles = (FOREST, pick, colors) => StyleSheet.create({
     backgroundColor: '#1B2A1A',
     borderWidth: 1,
     borderColor: '#30432A',
-    borderRadius: 24,
-    padding: 22,
-    marginBottom: 28,
+    borderRadius: 28,
+    padding: 24,
+    marginBottom: 25,
     overflow: 'hidden',
-    minHeight: 225,
+    minHeight: 238,
     justifyContent: 'center',
   },
 
@@ -458,8 +458,8 @@ const createStyles = (FOREST, pick, colors) => StyleSheet.create({
   },
 
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 22,
+    fontWeight: '900',
     color: FOREST.text,
     letterSpacing: -0.4,
   },
@@ -503,12 +503,12 @@ const createStyles = (FOREST, pick, colors) => StyleSheet.create({
 
   searchBox: {
     flex: 1,
-    minHeight: 52,
+    minHeight: 54,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingHorizontal: 15,
-    borderRadius: 15,
+    paddingHorizontal: 16,
+    borderRadius: 18,
     backgroundColor: FOREST.card,
     borderWidth: 1,
     borderColor: FOREST.cardBorder,
@@ -522,9 +522,9 @@ const createStyles = (FOREST, pick, colors) => StyleSheet.create({
   },
 
   searchButton: {
-    width: 52,
-    height: 52,
-    borderRadius: 15,
+    width: 54,
+    height: 54,
+    borderRadius: 18,
     backgroundColor: FOREST.green,
     alignItems: 'center',
     justifyContent: 'center',
@@ -561,7 +561,7 @@ const createStyles = (FOREST, pick, colors) => StyleSheet.create({
     flex: 1,
     minWidth: 0,
     marginBottom: 13,
-    borderRadius: 18,
+    borderRadius: 22,
     overflow: 'hidden',
     backgroundColor: FOREST.card,
     borderWidth: 1,
@@ -574,7 +574,7 @@ const createStyles = (FOREST, pick, colors) => StyleSheet.create({
   },
 
   imageContainer: {
-    height: 145,
+    height: 158,
     backgroundColor: FOREST.greenDark,
     position: 'relative',
     overflow: 'hidden',
@@ -619,15 +619,15 @@ const createStyles = (FOREST, pick, colors) => StyleSheet.create({
   },
 
   plantInfo: {
-    paddingHorizontal: 11,
-    paddingTop: 12,
-    paddingBottom: 12,
+    paddingHorizontal: 13,
+    paddingTop: 14,
+    paddingBottom: 14,
   },
 
   commonName: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: '800',
+    fontSize: 14,
+    lineHeight: 19,
+    fontWeight: '900',
     color: FOREST.text,
     minHeight: 36,
   },
