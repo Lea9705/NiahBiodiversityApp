@@ -145,7 +145,7 @@ function buildLocalPendingItems(records) {
       localRecord: record,
       name: record.scientificName || 'Unknown plant',
       status: 'Pending',
-      detail: 'Saved on this phone · Not sent yet',
+      detail: 'Saved on this phone · Waiting to sync',
       date: formatDate(record.createdAt),
       time: toTime(record.createdAt),
     }));
@@ -164,7 +164,7 @@ function toSyncedItem(record) {
     id: String(record.serverId),
     name: record.scientificName || 'Unknown plant',
     status: 'Pending',
-    detail: 'Sent · Waiting for admin approval',
+    detail: 'Submitted · Waiting for admin approval',
     date: formatDate(record.createdAt),
     time: toTime(record.createdAt),
   };
@@ -292,7 +292,7 @@ export default function MyActivitiesSection() {
         const formatted = myPlants.map((plant) => {
           const status = normalizeStatus(plant.plant_status);
 
-          let detail = 'Sent · Waiting for admin approval';
+          let detail = 'Submitted · Waiting for admin approval';
 
           if (status === 'Approved') {
             const updated = formatDateTime(plant.last_edit);
@@ -429,7 +429,7 @@ export default function MyActivitiesSection() {
         ? {
             ...item,
             status: 'Pending',
-            detail: 'Edit saved on this phone · Not sent yet',
+            detail: 'Edit saved on this phone · Waiting to sync',
           }
         : item
     );
