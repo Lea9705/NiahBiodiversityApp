@@ -4,7 +4,7 @@
 //
 // It keeps itself up to date: it checks again every 15 seconds and whenever
 // the app comes back to the front. There are no buttons to press.
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { authFetch } from '../utils/session';
 import { useTheme } from '../theme/ThemeContext';
 import { buildTimeLogEntries, formatDateTime } from '../utils/timeLog';
+import { normalizeLiveStatus, describeLiveStatus } from '../utils/liveStatus';
 import { API_BASE } from '../config';
 
 const PLANTS_URL = `${API_BASE}/plants`;
@@ -110,10 +111,39 @@ async function loadRevisions(serverId) {
   }
 }
 
-export default function PlantTimeLog({ record }) {
+// The record as it is on the server right now (its status, reviewer and note).
+// The time log below only lists submissions and edits, so approvals and
+// rejections are read from here. A failure is not an error: the log still works.
+async function loadCurrent(serverId) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await authFetch(`${PLANTS_URL}/${serverId}`, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+    });
+
+    if (!response.ok) return null;
+
+    return await response.json();
+  } catch (error) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export default function PlantTimeLog({ record, onStatus }) {
   const { styles, COLORS } = useStyles();
 
   const serverId = record && record.serverId ? String(record.serverId) : '';
+
+  // The page that shows the log can be told what the server says, so that its
+  // own status card is never out of date.
+  const onStatusRef = useRef(onStatus);
+  onStatusRef.current = onStatus;
 
   const [state, setState] = useState({
     loading: !!serverId,
@@ -121,6 +151,7 @@ export default function PlantTimeLog({ record }) {
     detail: '',
     willRetry: false,
     entries: [],
+    current: null,
   });
 
   // Reads the history. silent = a quiet refresh in the background: no
@@ -132,15 +163,26 @@ export default function PlantTimeLog({ record }) {
       }
 
       try {
-        const revisions = await loadRevisions(serverId);
+        const [revisions, plant] = await Promise.all([
+          loadRevisions(serverId),
+          loadCurrent(serverId),
+        ]);
 
-        setState({
+        const current = normalizeLiveStatus(plant);
+
+        if (current && onStatusRef.current) {
+          onStatusRef.current(current);
+        }
+
+        setState((previous) => ({
           loading: false,
           error: '',
           detail: '',
           willRetry: false,
           entries: buildTimeLogEntries(revisions),
-        });
+          // Keep the last known status if this check could not read it.
+          current: current || previous.current,
+        }));
 
         return { ok: true, stop: false };
       } catch (error) {
@@ -266,23 +308,6 @@ export default function PlantTimeLog({ record }) {
     return [];
   }, [serverId, state, record]);
 
-  const dotColor = (status) => {
-    if (status === 'Approved') return COLORS.success;
-    if (status === 'Rejected') return COLORS.error;
-    if (status === 'Pending') return COLORS.warning;
-    return COLORS.green;
-  };
-
-  const chipStyle = (status) => {
-    if (status === 'Approved') {
-      return { backgroundColor: COLORS.successBg, color: COLORS.success };
-    }
-    if (status === 'Rejected') {
-      return { backgroundColor: COLORS.errorBg, color: COLORS.error };
-    }
-    return { backgroundColor: COLORS.warningBg, color: COLORS.warning };
-  };
-
   return (
     <View style={styles.section}>
       <View style={styles.heading}>
@@ -326,14 +351,23 @@ export default function PlantTimeLog({ record }) {
         </View>
       )}
 
-      {entries.map((entry, index) => {
-        const chip = entry.status ? chipStyle(entry.status) : null;
+      {!!state.current && (
+        <View style={styles.nowBox}>
+          <Text style={styles.nowLabel}>CURRENT STATUS</Text>
+          <Text style={styles.nowText}>{describeLiveStatus(state.current)}</Text>
+          <Text style={styles.nowNote}>
+            Approvals and rejections are not listed below. This log only lists
+            submissions and edits.
+          </Text>
+        </View>
+      )}
 
+      {entries.map((entry, index) => {
         return (
           <View key={entry.key} style={styles.entry}>
             <View style={styles.rail}>
               <View
-                style={[styles.dot, { backgroundColor: dotColor(entry.status) }]}
+                style={[styles.dot, { backgroundColor: COLORS.green }]}
               />
               {index < entries.length - 1 && <View style={styles.line} />}
             </View>
@@ -341,19 +375,6 @@ export default function PlantTimeLog({ record }) {
             <View style={styles.entryBody}>
               <View style={styles.entryTop}>
                 <Text style={styles.entryTitle}>{entry.title}</Text>
-
-                {!!chip && (
-                  <View
-                    style={[
-                      styles.chip,
-                      { backgroundColor: chip.backgroundColor },
-                    ]}
-                  >
-                    <Text style={[styles.chipText, { color: chip.color }]}>
-                      {entry.status}
-                    </Text>
-                  </View>
-                )}
               </View>
 
               {!!entry.detail && (
@@ -425,6 +446,33 @@ const createStyles = (COLORS) =>
       fontSize: 11,
       color: COLORS.muted,
       marginTop: 3,
+    },
+
+    nowBox: {
+      padding: 12,
+      marginBottom: 14,
+      borderRadius: 14,
+      backgroundColor: COLORS.surfaceLight,
+      gap: 3,
+    },
+
+    nowLabel: {
+      color: COLORS.muted,
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 1,
+    },
+
+    nowText: {
+      color: COLORS.text,
+      fontSize: 15,
+      fontWeight: '800',
+    },
+
+    nowNote: {
+      color: COLORS.muted,
+      fontSize: 11,
+      lineHeight: 16,
     },
 
     stateBox: {

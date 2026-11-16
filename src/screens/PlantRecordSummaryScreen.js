@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -22,6 +22,7 @@ import { normalizeApproval } from '../utils/approval';
 import { formatDateTime } from '../utils/timeLog';
 import { formatConservationStatus } from '../utils/conservationStatus';
 import { canViewPlantLocation } from '../utils/locationAccess';
+import { mergeLiveStatus, sameLiveStatus } from '../utils/liveStatus';
 
 
 const PALETTES = {
@@ -62,7 +63,24 @@ const PALETTES = {
 export default function PlantRecordSummaryScreen({ navigation, route }) {
   const { styles, COLORS, mode } = useStyles();
 
-  const { record, readOnly, editing } = route.params;
+  const { record: routeRecord, readOnly, editing } = route.params;
+
+  // What the server currently says about this record, once the time log has
+  // read it. This page was opened with a copy of the record taken at that
+  // moment, which can be out of date (for example, an admin approves the record
+  // afterwards), so the server's status is laid over it.
+  const [live, setLive] = useState(null);
+
+  const handleLiveStatus = useCallback(
+    (next) =>
+      setLive((previous) => (sameLiveStatus(previous, next) ? previous : next)),
+    []
+  );
+
+  const record = useMemo(
+    () => mergeLiveStatus(routeRecord, live),
+    [routeRecord, live]
+  );
   const { addRecord, updateRecord, syncProblem } = useRecords();
 
   // Staff are logged in. Visitors are not.
@@ -505,7 +523,9 @@ export default function PlantRecordSummaryScreen({ navigation, route }) {
         </View>
 
         {/* Time log: staff only */}
-        {readOnly && isLoggedIn && <PlantTimeLog record={record} />}
+        {readOnly && isLoggedIn && (
+          <PlantTimeLog record={record} onStatus={handleLiveStatus} />
+        )}
 
         {/* Edit: staff can edit approved and rejected records */}
         {canEdit && (

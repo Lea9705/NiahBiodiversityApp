@@ -139,12 +139,10 @@ export async function syncUpdateToCloud(record) {
     photoUrls.push(uploadedEditPhotos[uri]);
   }
 
-  await sendJson(`${API_URL}/${serverId}/status`, 'PATCH', {
-    status: 'Pending',
-    reason: null,
-  });
-
-  return sendJson(`${API_URL}/${serverId}`, 'PUT', {
+  // Send the edit FIRST. The server puts the record back to Pending itself when
+  // it accepts an edit. Setting Pending before the edit meant that every failed
+  // attempt, and every retry, un-approved the record again.
+  const result = await sendJson(`${API_URL}/${serverId}`, 'PUT', {
     scientificName: record.scientificName,
     commonName: record.commonName,
     family: record.family,
@@ -158,4 +156,17 @@ export async function syncUpdateToCloud(record) {
     imageUrls: photoUrls,
     change_summary: 'Edited in the mobile app. Sent back for review.',
   });
+
+  // Make sure it is back in review and clear an old rejection note. The edit
+  // is already saved, so a failure here is not an error.
+  try {
+    await sendJson(`${API_URL}/${serverId}/status`, 'PATCH', {
+      status: 'Pending',
+      reason: null,
+    });
+  } catch (error) {
+    console.log('Could not reset the status after an edit:', error.message);
+  }
+
+  return result;
 }
