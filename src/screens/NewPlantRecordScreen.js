@@ -76,9 +76,24 @@ export default function NewPlantRecordScreen({ navigation, route }) {
       : `plant_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
   );
 
-  const [photos, setPhotos] = useState(() =>
-    editRecord && Array.isArray(editRecord.photos) ? [...editRecord.photos] : []
-  );
+  // The photos of the record being edited. If the record that was passed in
+  // has none, the copy saved on this phone is used, so an edit never starts
+  // with the photos missing while the record page shows them.
+  const [photos, setPhotos] = useState(() => {
+    const own =
+      editRecord && Array.isArray(editRecord.photos) ? editRecord.photos : [];
+
+    if (!editRecord || own.length > 0) return [...own];
+
+    const saved = (records || []).find(
+      (item) =>
+        item.id === editRecord.id ||
+        (editRecord.serverId &&
+          String(item.serverId) === String(editRecord.serverId))
+    );
+
+    return saved && Array.isArray(saved.photos) ? [...saved.photos] : [];
+  });
   const [locationError, setLocationError] = useState('');
   const [locationLoading, setLocationLoading] = useState(false);
 
@@ -203,26 +218,62 @@ export default function NewPlantRecordScreen({ navigation, route }) {
         return;
       }
 
+      // On Android 12 and newer a person can allow only an approximate
+      // location. That gives a position only through the internet, so it does
+      // not work offline.
+      if (permission.android && permission.android.accuracy === 'coarse') {
+        setLocationError(
+          'Precise location is turned off for this app. Open Settings, Apps, this app, Permissions, Location, and turn on Use precise location.'
+        );
+        return;
+      }
+
       // The default accuracy asks Android for a position from Wi-Fi and the
-      // mobile network, which needs internet. With no internet that fails on
-      // an installed app. High accuracy uses the phone's GPS satellites, which
-      // work without internet. A satellite fix can take a while, so it is
-      // given up to 60 seconds. An old position is never used: if there is no
+      // mobile network, which needs internet. High accuracy uses the phone's
+      // GPS satellites, which work without internet. A single request can fail
+      // at once if the GPS has not locked yet, and without internet the first
+      // lock is slow. So the app listens and takes the first position that
+      // arrives, for up to 2 minutes. An old position is never used: with no
       // fix, the message below is shown, so a record never gets a wrong place.
-      const position = await Promise.race([
-        Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.High,
-        }),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('GPS timeout')), 60000)
-        ),
-      ]);
+      const position = await new Promise((resolve, reject) => {
+        let subscription = null;
+        let finished = false;
+
+        const finish = (action, value) => {
+          if (finished) return;
+          finished = true;
+          clearTimeout(timer);
+          if (subscription) subscription.remove();
+          action(value);
+        };
+
+        const timer = setTimeout(
+          () => finish(reject, new Error('GPS timeout')),
+          120000
+        );
+
+        Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.High,
+            timeInterval: 1000,
+            distanceInterval: 0,
+          },
+          (next) => finish(resolve, next)
+        )
+          .then((sub) => {
+            if (finished) sub.remove();
+            else subscription = sub;
+          })
+          .catch((error) => finish(reject, error));
+      });
 
       updateField('latitude', position.coords.latitude.toFixed(6));
       updateField('longitude', position.coords.longitude.toFixed(6));
     } catch (error) {
       setLocationError(
-        'Could not get a GPS fix. Go outside or near a window, make sure Location is on, then tap Use current GPS location.'
+        `Could not get a GPS fix. Go outside or near a window, make sure Location is on, then tap Use current GPS location. (${
+          error && error.message ? error.message : 'unknown error'
+        })`
       );
     } finally {
       setLocationLoading(false);
@@ -518,6 +569,7 @@ export default function NewPlantRecordScreen({ navigation, route }) {
 
             <StyledInput
               label="Scientific name"
+              maxLength={100}
               placeholder="e.g. Shorea curtisii"
               value={form.scientificName}
               onChangeText={(value) =>
@@ -527,6 +579,7 @@ export default function NewPlantRecordScreen({ navigation, route }) {
 
             <StyledInput
               label="Common name"
+              maxLength={100}
               placeholder="e.g. Seraya"
               value={form.commonName}
               onChangeText={(value) => updateField('commonName', value)}
@@ -534,6 +587,7 @@ export default function NewPlantRecordScreen({ navigation, route }) {
 
             <StyledInput
               label="Family"
+              maxLength={100}
               placeholder="e.g. Dipterocarpaceae"
               value={form.family}
               onChangeText={(value) => updateField('family', value)}
@@ -541,6 +595,7 @@ export default function NewPlantRecordScreen({ navigation, route }) {
 
             <StyledInput
               label="Genus"
+              maxLength={100}
               placeholder="e.g. Shorea"
               value={form.genus}
               onChangeText={(value) => updateField('genus', value)}
@@ -548,6 +603,7 @@ export default function NewPlantRecordScreen({ navigation, route }) {
 
             <StyledInput
               label="Species"
+              maxLength={100}
               placeholder="e.g. curtisii"
               value={form.species}
               onChangeText={(value) => updateField('species', value)}

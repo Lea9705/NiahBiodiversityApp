@@ -21,6 +21,29 @@ export function getUser() {
   return currentUser;
 }
 
+
+// Same as fetch, but gives up after a time limit. Without it, a request that
+// is cut off by a dropped connection can wait for minutes, and the screen that
+// is waiting for it looks frozen.
+export function fetchWithTimeout(url, options = {}, ms = 20000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+
+  return fetch(url, { ...options, signal: controller.signal })
+    .catch((error) => {
+      if (error && error.name === 'AbortError') {
+        const timeoutError = new Error(
+          'Request timed out: the server took too long to answer.'
+        );
+        timeoutError.code = 'TIMEOUT';
+        throw timeoutError;
+      }
+
+      throw error;
+    })
+    .finally(() => clearTimeout(timer));
+}
+
 // Same as fetch, but adds the login token when someone is logged in.
 export function authFetch(url, options = {}) {
   const headers = { Accept: 'application/json', ...(options.headers || {}) };
@@ -29,7 +52,7 @@ export function authFetch(url, options = {}) {
     headers.Authorization = `Bearer ${currentToken}`;
   }
 
-  return fetch(url, { ...options, headers });
+  return fetchWithTimeout(url, { ...options, headers });
 }
 
 // Same as authFetch, but as the account that owns the given login token,
@@ -42,5 +65,5 @@ export function authFetchAs(token, url, options = {}) {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  return fetch(url, { ...options, headers });
+  return fetchWithTimeout(url, { ...options, headers });
 }

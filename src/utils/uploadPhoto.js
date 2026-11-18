@@ -65,6 +65,8 @@ function createPresignedUpload(fileName) {
   };
 }
 
+import { fetchWithTimeout } from './session';
+
 export async function uploadPhotoToS3(localUri, plantContext) {
   const fileName = `${plantContext.id || Date.now()}_${Date.now()}.jpg`;
 
@@ -73,11 +75,15 @@ export async function uploadPhotoToS3(localUri, plantContext) {
   const fileResponse = await fetch(localUri);
   const blob = await fileResponse.blob();
 
-  const uploadResult = await fetch(uploadUrl, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'image/jpeg' },
-    body: blob,
-  });
+  const uploadResult = await fetchWithTimeout(
+    uploadUrl,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'image/jpeg' },
+      body: blob,
+    },
+    60000
+  );
 
   if (!uploadResult.ok) {
     const detail = await uploadResult.text();
