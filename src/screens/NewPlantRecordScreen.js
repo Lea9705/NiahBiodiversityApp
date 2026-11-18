@@ -203,13 +203,26 @@ export default function NewPlantRecordScreen({ navigation, route }) {
         return;
       }
 
-      const position = await Location.getCurrentPositionAsync({});
+      // The default accuracy asks Android for a position from Wi-Fi and the
+      // mobile network, which needs internet. With no internet that fails on
+      // an installed app. High accuracy uses the phone's GPS satellites, which
+      // work without internet. A satellite fix can take a while, so it is
+      // given up to 60 seconds. An old position is never used: if there is no
+      // fix, the message below is shown, so a record never gets a wrong place.
+      const position = await Promise.race([
+        Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('GPS timeout')), 60000)
+        ),
+      ]);
 
       updateField('latitude', position.coords.latitude.toFixed(6));
       updateField('longitude', position.coords.longitude.toFixed(6));
     } catch (error) {
       setLocationError(
-        'Could not get a GPS fix. Try moving to open ground.'
+        'Could not get a GPS fix. Go outside or near a window, make sure Location is on, then tap Use current GPS location.'
       );
     } finally {
       setLocationLoading(false);
