@@ -16,6 +16,7 @@ import { API_BASE } from '../config';
 const RecordsContext = createContext(null);
 
 const PLANTS_URL = `${API_BASE}/plants`;
+const PUBLIC_PLANTS_URL = `${API_BASE}/public/plants`;
 
 // How often the phone checks the cloud for plants that were approved,
 // rejected or deleted (while it is online and someone is logged in).
@@ -467,8 +468,7 @@ export function RecordsProvider({ children }) {
          FROM plants WHERE serverId IS NOT NULL`
       );
 
-      const response = await authFetch(PLANTS_URL, {
-        headers: {
+        const response = await authFetch(isVisitorSync ? PUBLIC_PLANTS_URL : PLANTS_URL, {        headers: {
           Accept: 'application/json',
           ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
         },
